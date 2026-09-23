@@ -269,6 +269,7 @@ ol.hard li{margin-bottom:2px}
   <button id="btnNotify">锁屏提醒</button>
   <button id="btnIcs">日历</button>
   <button id="btnPaste">导入</button>
+  <button id="btnState">状态备份</button>
   <button class="primary" id="btnGen">生成反馈</button>
 </div>
 
@@ -302,6 +303,22 @@ ol.hard li{margin-bottom:2px}
     <button class="primary" onclick="parsePaste()">解析并替换</button>
     <button onclick="closeP()">取消</button>
   </div>
+</div></div>
+
+<div class="modal" id="mState"><div class="sheet">
+  <h3>打卡状态备份 / 恢复</h3>
+  <p class="tip">换手机、换域名或清缓存前，先「导出」一份；丢了之后把那份文本粘到下面「恢复」即可还原勾选。支持两种格式：本页导出的 JSON，或「生成反馈」出来的 Markdown 表格。</p>
+  <div class="row">
+    <button class="primary" onclick="exportState()">导出当前状态（复制）</button>
+    <button onclick="copyState()">复制 JSON</button>
+    <button onclick="downloadState()">下载 .json</button>
+  </div>
+  <textarea id="stateArea" style="height:150px" placeholder="把导出的 JSON 或反馈 Markdown 粘进来…"></textarea>
+  <div class="row">
+    <button class="primary" onclick="importState()">恢复</button>
+    <button onclick="closeS()">关闭</button>
+  </div>
+  <p class="tip" id="stateMsg"></p>
 </div></div>
 
 <script>
@@ -350,7 +367,9 @@ function loadPlan(){try{const s=localStorage.getItem(KEY);
 function savePlan(){localStorage.setItem(KEY,JSON.stringify(PLAN));}
 let PLAN=loadPlan();
 const SKEY='dp_state_'+PLAN.date;
-function loadState(){try{return JSON.parse(localStorage.getItem(SKEY))||{}}catch(e){return{}}}
+function loadState(){try{const raw=localStorage.getItem(SKEY);
+  if(!raw) return JSON.parse(JSON.stringify(PLAN_DEFAULT.states||{}));
+  return JSON.parse(raw)||{};}catch(e){return{}}}
 let ST=loadState();
 function saveState(){localStorage.setItem(SKEY,JSON.stringify(ST));}
 const $=id=>document.getElementById(id);
@@ -621,6 +640,8 @@ $('btnIcs').onclick=()=>{
 /* 导入 */
 $('btnPaste').onclick=()=>{$('mPaste').classList.add('show');$('pasteArea').value='';};
 function closeP(){$('mPaste').classList.remove('show');}
+$('btnState').onclick=()=>{$('mState').classList.add('show');$('stateArea').value='';$('stateMsg').textContent='';};
+function closeS(){$('mState').classList.remove('show');}
 function applyPlanText(txt){
   const rows=[];
   let date=PLAN.date,wd=PLAN.weekday,title=PLAN.title,sub=PLAN.sub,cons=PLAN.constraint;
@@ -689,6 +710,34 @@ function copyOut(){const t=$('out');t.select();t.setSelectionRange(0,99999);
 function downloadOut(){const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([$('out').value],{type:'text/markdown;charset=utf-8'}));
   a.download='反馈_'+PLAN.date+'.md'; a.click();}
+/* 打卡状态 导出/导入（防丢 + 跨设备恢复） */
+function stateJSON(){return JSON.stringify({date:PLAN.date, items:PLAN.items.map((it,i)=>({t:it[0],name:it[1],s:(ST[i]||{}).s||'',min:(ST[i]||{}).min||'',note:(ST[i]||{}).note||''})), health:{rests:H.rests,cups:H.cups}}, null, 0);}
+function exportState(){$('stateArea').value=stateJSON(); copyState();}
+function copyState(){const t=$('stateArea'); t.value=t.value||stateJSON(); t.select(); t.setSelectionRange(0,99999);
+  if(navigator.clipboard)navigator.clipboard.writeText(t.value).then(()=>{$('stateMsg').textContent='已复制到剪贴板，存到备忘录即可';});
+  else document.execCommand('copy');}
+function downloadState(){const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([stateJSON()],{type:'application/json'}));
+  a.download='打卡_'+PLAN.date+'.json'; a.click();}
+function importState(){
+  const txt=$('stateArea').value.trim(); if(!txt){$('stateMsg').textContent='请先粘贴导出的 JSON 或反馈 Markdown';return;}
+  let ok=false;
+  // 1) 尝试 JSON
+  try{const o=JSON.parse(txt);
+    if(o&&o.items&&Array.isArray(o.items)){
+      o.items.forEach((it,i)=>{ if(PLAN.items[i]&&PLAN.items[i][0]===it.t){ const st={}; if(it.s)st.s=it.s; if(it.min)st.min=it.min; if(it.note)st.note=it.note; if(Object.keys(st).length)ST[i]=st; }});
+      if(o.health){ if(typeof o.health.rests==='number')H.rests=o.health.rests; if(typeof o.health.cups==='number')H.cups=o.health.cups; saveH(); }
+      ok=true;
+    }
+  }catch(e){}
+  // 2) 尝试反馈 Markdown 表格
+  if(!ok){
+    const re=/\|([^|]+)\|([^|]+)\|(✅ 完成|◐ 部分完成|↷ 跳过|未标记)\|([^|]*)\|([^|]*)\|/g; let m;
+    (PLAN.items||[]).forEach((it,i)=>{ while((m=re.exec(txt))){ if(m[1].trim()===it[0]&&m[2].trim()===it[1]){ const s={done:'done',partial:'partial',skip:'skip'}[m[3].trim()]||''; const st={}; if(s)st.s=s; if(m[4].trim()&&m[4].trim()!=='-')st.min=m[4].trim(); if(m[5].trim())st.note=m[5].trim(); if(Object.keys(st).length)ST[i]=st; break; } }});
+    ok=true;
+  }
+  saveState(); render(); $('stateMsg').textContent='已恢复勾选 ✔ 刷新后仍在（存本机）';
+}
 function toast(m){const t=$('toast');if(!t)return;t.textContent=m;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),3600);}
 render();
