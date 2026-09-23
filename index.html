@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1F3864">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>每日计划</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+:root{
+  --bg:#F5F7FA; --card:#fff; --ink:#1B2430; --sub:#7A869A; --line:#EAEEF4;
+  --brand:#1F3864; --brand2:#3A6EAF; --accent:#2E9E6B;
+  --done:#22A06B; --part:#E5A23C; --skip:#B8BFC9; --pend:#E3E8EF;
+  --keybg:#FCE4D6; --keyink:#C00000;
+  --r:16px; --sh:0 2px 10px rgba(24,40,70,.06);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.5 -apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;
+  padding-bottom:92px}
+.wrap{max-width:600px;margin:0 auto;padding:14px 14px 0}
+
+/* 顶部 */
+.hero{background:linear-gradient(135deg,#24406E,#1F3864);color:#fff;border-radius:20px;
+  padding:16px 18px;box-shadow:0 6px 18px rgba(31,56,100,.22);margin-bottom:12px}
+.hero .d1{font-size:13px;opacity:.85;letter-spacing:.5px}
+.hero .d2{font-size:19px;font-weight:700;margin-top:2px}
+.hero .d3{font-size:12.5px;opacity:.8;margin-top:3px}
+.heroRow{display:flex;align-items:center;gap:16px;margin-top:14px}
+.ring{position:relative;width:92px;height:92px;flex:none}
+.ring svg{transform:rotate(-90deg)}
+.ring .txt{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring .txt b{font-size:22px;line-height:1}
+.ring .txt span{font-size:10.5px;opacity:.85;margin-top:2px}
+.mini{flex:1;display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.mini div{font-size:12px;opacity:.92}
+.mini div b{display:block;font-size:17px;font-weight:700;margin-bottom:1px}
+.mini .ok b{color:#7EE2B8}.mini .pt b{color:#F5C97E}.mini .sk b{color:#C9D2DE}
+
+/* 卡片 */
+.card{background:var(--card);border-radius:var(--r);box-shadow:var(--sh);padding:14px 16px;margin-bottom:12px}
+.card h3{margin:0 0 10px;font-size:14px;color:var(--brand);font-weight:700;display:flex;align-items:center;gap:6px}
+.card h3 em{font-style:normal;font-size:11.5px;color:var(--sub);font-weight:500}
+
+/* 备考总进度条 */
+.tl{position:relative;height:8px;background:var(--pend);border-radius:5px;margin:22px 0 26px}
+.tl>i{position:absolute;left:0;top:0;bottom:0;border-radius:5px;
+  background:linear-gradient(90deg,#3A6EAF,#2E9E6B)}
+.tl .dot{position:absolute;top:-4px;width:16px;height:16px;border-radius:50%;
+  background:#fff;border:3px solid var(--brand2);transform:translateX(-50%)}
+.tl .dot.big{border-color:var(--keyink);width:18px;height:18px;top:-5px}
+.tl .lb{position:absolute;top:14px;transform:translateX(-50%);font-size:10px;color:var(--sub);white-space:nowrap}
+.tl .lb b{display:block;color:var(--ink);font-size:10.5px}
+.tl .today{position:absolute;top:-9px;width:2px;height:26px;background:var(--accent);transform:translateX(-50%)}
+.tl .todayLb{position:absolute;top:-24px;transform:translateX(-50%);font-size:10px;color:var(--accent);font-weight:700}
+.pill{display:flex;gap:8px;flex-wrap:wrap}
+.pill span{font-size:12px;background:#EEF2F8;color:#4A5568;border-radius:20px;padding:4px 10px}
+.pill span b{color:var(--brand);font-weight:700}
+
+/* 约束 */
+.cons{background:#FFF8E8;border-left:4px solid #E5A23C;border-radius:12px;padding:11px 13px;
+  font-size:13px;line-height:1.65;color:#5A4A1E;margin-bottom:12px}
+.now{display:flex;align-items:center;gap:8px;background:#EAF2FB;border:1px solid #CFE0F3;color:var(--brand);
+  border-radius:12px;padding:10px 13px;font-size:13.5px;font-weight:600;margin-bottom:12px}
+.now .pulse{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none;
+  box-shadow:0 0 0 0 rgba(46,158,107,.6);animation:pl 1.8s infinite}
+@keyframes pl{70%{box-shadow:0 0 0 8px rgba(46,158,107,0)}100%{box-shadow:0 0 0 0 rgba(46,158,107,0)}}
+
+/* 时间轴 */
+.tline{position:relative;padding-left:2px}
+.item{position:relative;padding:0 0 0 76px;margin-bottom:8px}
+.item:before{content:"";position:absolute;left:64px;top:26px;bottom:-8px;width:2px;background:var(--line)}
+.item:last-child:before{display:none}
+.item:after{content:"";position:absolute;left:59px;top:15px;width:12px;height:12px;border-radius:50%;
+  background:#fff;border:3px solid var(--pend)}
+.item.s-done:after{background:var(--done);border-color:var(--done)}
+.item.s-partial:after{background:var(--part);border-color:var(--part)}
+.item.s-skip:after{background:var(--skip);border-color:var(--skip)}
+.item.active:after{border-color:var(--brand2);box-shadow:0 0 0 5px rgba(58,110,175,.15)}
+.box{background:var(--card);border-radius:14px;box-shadow:var(--sh);overflow:hidden;border:1px solid transparent}
+.item.active .box{border-color:var(--brand2)}
+.item.s-done .box{opacity:.66}
+.tm{position:absolute;left:0;top:12px;width:56px;text-align:right;font-size:12.5px;font-weight:700;
+  color:var(--keyink);font-family:ui-monospace,Menlo,Consolas,monospace}
+.hd{display:flex;align-items:flex-start;gap:8px;padding:12px 13px 6px}
+.hd .t{flex:1;font-size:14.5px;font-weight:600;line-height:1.4}
+.item.s-done .hd .t{text-decoration:line-through;color:var(--sub)}
+.dur{font-size:11px;color:var(--sub);background:#EEF1F6;border-radius:6px;padding:2px 6px;white-space:nowrap;margin-top:2px}
+.meta{padding:0 13px 10px;font-size:12.5px;color:var(--sub);line-height:1.6}
+.meta .k{color:#4A5568;font-weight:600}
+.out{display:inline-block;margin-top:5px;font-size:11.5px;background:#EAF6EF;color:#1B7A52;border-radius:6px;padding:3px 8px}
+.seg{display:flex;border-top:1px solid var(--line)}
+.seg button{flex:1;border:0;background:#fff;padding:10px 0;font-size:12.5px;color:#5A6577;font-weight:600;
+  border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button:active{background:#F2F5F9}
+.seg .on{background:var(--done);color:#fff}
+.seg .on.p{background:var(--part);color:#fff}
+.seg .on.s{background:var(--skip);color:#fff}
+.seg .on.n{background:#EEF2F8;color:var(--brand)}
+.fb{display:none;padding:0 13px 12px}
+.fb.show{display:block}
+.fb .hint{font-size:11.5px;color:var(--sub);margin:8px 0 6px}
+.fb textarea{width:100%;border:1px solid var(--line);border-radius:10px;padding:9px;font:inherit;font-size:13px;
+  background:#FAFBFD;resize:vertical;min-height:52px}
+.fb input{width:120px;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:7px 9px;
+  font:inherit;font-size:13px;background:#FAFBFD}
+.badge{font-size:10px;background:var(--keybg);color:var(--keyink);border-radius:5px;padding:1px 5px;margin-left:5px}
+ol.hard{margin:0;padding-left:18px;font-size:13.5px;line-height:1.8}
+ol.hard li{margin-bottom:2px}
+.p{font-size:13.5px;line-height:1.75;color:#3A4453;margin:0}
+.p.warn{color:var(--keyink);font-weight:600}
+
+/* 休息 · 喝水 */
+.hl{display:flex;gap:10px}
+.hl .h{flex:1;border-radius:14px;padding:12px 13px}
+.hl .h.brk{background:linear-gradient(135deg,#EAF3FF,#F7FBFF);border:1px solid #D6E6F8}
+.hl .h.wat{background:linear-gradient(135deg,#E9F7F2,#F6FCFA);border:1px solid #CFEBE0}
+.hl .lab{font-size:11.5px;color:#5A6577;font-weight:700;letter-spacing:.3px}
+.hl .big{font-size:25px;font-weight:800;line-height:1.15;margin-top:3px;
+  font-family:ui-monospace,Menlo,Consolas,monospace}
+.hl .h.brk .big{color:var(--brand2)}
+.hl .h.wat .big{color:#1B8C63}
+.hl .sub2{font-size:11.5px;color:var(--sub);margin-top:3px;min-height:17px}
+.cups{display:flex;gap:4px;margin-top:7px;flex-wrap:wrap}
+.cup{width:15px;height:19px;border-radius:3px 3px 6px 6px;background:#fff;border:1.5px solid #BFDCD0}
+.cup.on{background:#38B48B;border-color:#38B48B}
+.hl .btn{margin-top:9px;border:0;border-radius:9px;padding:8px 10px;font:inherit;font-size:12.5px;
+  font-weight:700;width:100%}
+.hl .h.brk .btn{background:#3A6EAF;color:#fff}
+.hl .h.wat .btn{background:#2E9E6B;color:#fff}
+.hl .btn:active{transform:scale(.97)}
+.hset{display:flex;gap:9px;align-items:center;margin-top:11px;flex-wrap:wrap;
+  font-size:12px;color:var(--sub);border-top:1px dashed var(--line);padding-top:10px}
+.hset select{border:1px solid var(--line);border-radius:8px;padding:5px 6px;font:inherit;font-size:12px;background:#fff;color:var(--ink)}
+.hset .chk{display:flex;align-items:center;gap:4px}
+.hset .lnk{border:1px solid var(--line);background:#fff;border-radius:8px;padding:5px 9px;
+  font:inherit;font-size:11.5px;color:#41506A;margin-left:auto}
+
+/* 休息弹条 */
+.rest{position:fixed;left:0;right:0;bottom:0;z-index:40;display:none;color:#fff;
+  background:linear-gradient(135deg,#1F3864,#2E9E6B);
+  padding:18px 18px calc(18px + env(safe-area-inset-bottom));box-shadow:0 -6px 24px rgba(20,40,70,.3)}
+.rest.show{display:block}
+.rest .t{font-size:17px;font-weight:800}
+.rest .s{font-size:13px;opacity:.93;margin-top:5px;line-height:1.75}
+.restbar{height:6px;background:rgba(255,255,255,.25);border-radius:4px;margin-top:12px;overflow:hidden}
+.restbar>i{display:block;height:100%;width:0;background:#fff;border-radius:4px}
+.rest .row{display:flex;gap:8px;margin-top:13px}
+.rest .row button{flex:1;border:0;border-radius:11px;padding:11px 0;font:inherit;font-size:13.5px;font-weight:700}
+.rest .row .g{background:#fff;color:#1F3864}
+.rest .row .o{background:rgba(255,255,255,.18);color:#fff}
+
+/* 底部栏 */
+.tools{position:fixed;left:0;right:0;bottom:0;background:rgba(255,255,255,.96);backdrop-filter:blur(8px);
+  border-top:1px solid var(--line);padding:9px 12px calc(9px + env(safe-area-inset-bottom));
+  display:flex;gap:7px;z-index:9}
+.tools button{flex:1;border:1px solid var(--line);background:#fff;border-radius:11px;padding:10px 0;
+  font:inherit;font-size:12.5px;font-weight:600;color:#41506A}
+.tools .primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+.tools button:active{transform:scale(.97)}
+
+/* 弹层 */
+.modal{position:fixed;inset:0;background:rgba(12,18,30,.45);display:none;align-items:flex-end;z-index:30}
+.modal.show{display:flex}
+.sheet{background:#fff;width:100%;max-width:600px;border-radius:20px 20px 0 0;padding:16px;
+  max-height:86vh;overflow:auto;margin:0 auto}
+.sheet h3{margin:0 0 10px;font-size:16px}
+.sheet textarea{width:100%;border:1px solid var(--line);border-radius:12px;padding:10px;font:inherit;font-size:13px;resize:vertical}
+.sheet .tip{font-size:12px;color:var(--sub);line-height:1.65;margin:0 0 10px}
+.sheet .row{display:flex;gap:8px;margin-top:10px}
+.sheet .row button{flex:1;border:1px solid var(--line);background:#fff;border-radius:11px;padding:11px 0;
+  font:inherit;font-size:13px;font-weight:600}
+.sheet .row .primary{background:var(--brand);color:#fff;border-color:var(--brand)}
+#out{height:240px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.6}
+.foot{text-align:center;font-size:11.5px;color:var(--sub);padding:6px 0 16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hero">
+    <div class="d1" id="hDate">—</div>
+    <div class="d2" id="hTitle">—</div>
+    <div class="d3" id="hSub">—</div>
+    <div class="heroRow">
+      <div class="ring">
+        <svg width="92" height="92" viewBox="0 0 92 92">
+          <circle cx="46" cy="46" r="38" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="9"/>
+          <circle id="arc" cx="46" cy="46" r="38" fill="none" stroke="#5FD3A3" stroke-width="9"
+                  stroke-linecap="round" stroke-dasharray="238.8" stroke-dashoffset="238.8"
+                  style="transition:stroke-dashoffset .5s ease"/>
+        </svg>
+        <div class="txt"><b id="pct">0%</b><span>今日完成</span></div>
+      </div>
+      <div class="mini">
+        <div class="ok"><b id="mDone">0</b>已完成</div>
+        <div class="pt"><b id="mPart">0</b>部分完成</div>
+        <div class="sk"><b id="mSkip">0</b>跳过</div>
+        <div><b id="mLeft">0</b>待进行</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>休息 · 喝水 <em id="hlSub">久坐提醒</em></h3>
+    <div class="hl">
+      <div class="h brk">
+        <div class="lab">☕ 下次休息</div>
+        <div class="big" id="brkCd">--:--</div>
+        <div class="sub2" id="brkTip">—</div>
+        <button class="btn" onclick="doBreak()">现在就休息 5 分钟</button>
+      </div>
+      <div class="h wat">
+        <div class="lab">💧 今日喝水</div>
+        <div class="big" id="watNum">0 / 8 杯</div>
+        <div class="cups" id="cups"></div>
+        <div class="sub2" id="watTip">—</div>
+        <button class="btn" onclick="drink()">喝了一杯 +1</button>
+      </div>
+    </div>
+    <div class="hset">
+      <label class="chk">休息间隔
+        <select id="selGap" onchange="setCfg('gap',+this.value)">
+          <option value="25">25 分钟</option><option value="30">30 分钟</option>
+          <option value="45">45 分钟</option><option value="60">60 分钟</option>
+        </select>
+      </label>
+      <label class="chk">喝水间隔
+        <select id="selWat" onchange="setCfg('wgap',+this.value)">
+          <option value="30">30 分钟</option><option value="45">45 分钟</option>
+          <option value="60">60 分钟</option><option value="90">90 分钟</option>
+        </select>
+      </label>
+      <label class="chk"><input type="checkbox" id="ckNot" onchange="setCfg('notify',this.checked)"> 通知</label>
+      <label class="chk"><input type="checkbox" id="ckVib" onchange="setCfg('vibe',this.checked)"> 震动</label>
+      <button class="lnk" onclick="exportBreakIcs()">导出休息提醒到日历</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>整体备考进度 <em id="ovSub"></em></h3>
+    <div class="tl" id="tlBar"></div>
+    <div class="pill" id="ovPill"></div>
+  </div>
+
+  <div class="cons" id="constraint"></div>
+  <div class="now" id="nowBox"><span class="pulse"></span><span id="nowTxt"></span></div>
+
+  <div class="tline" id="list"></div>
+
+  <div class="card"><h3>今天三件硬事</h3><ol class="hard" id="hard"></ol></div>
+  <div class="card"><h3>论文账</h3><p class="p" id="paper"></p></div>
+  <div class="card"><h3>最容易翻车的点</h3><p class="p warn" id="risk"></p></div>
+  <div class="foot">数据只存在你手机本地 · 晚上点「生成反馈」回传</div>
+</div>
+
+<div class="tools">
+  <button id="btnNotify">锁屏提醒</button>
+  <button id="btnIcs">日历</button>
+  <button id="btnPaste">导入</button>
+  <button class="primary" id="btnGen">生成反馈</button>
+</div>
+
+<div class="rest" id="restBar">
+  <div class="t">☕ 该休息了 · <span id="restCd">05:00</span></div>
+  <div class="s">站起来走两步，远眺 20 秒放松眼睛<br>顺便喝两口水（今日已喝 <span id="restWat">0</span> 杯）</div>
+  <div class="restbar"><i id="restProg"></i></div>
+  <div class="row">
+    <button class="g" onclick="endRest()">休息好了，回去学</button>
+    <button class="o" onclick="snooze()">再延后 5 分钟</button>
+  </div>
+</div>
+
+<div class="modal" id="mOut"><div class="sheet">
+  <h3>今日完成反馈</h3>
+  <textarea id="out"></textarea>
+  <div class="row">
+    <button class="primary" onclick="copyOut()">复制全文</button>
+    <button onclick="downloadOut()">下载 .md</button>
+    <button onclick="closeM()">关闭</button>
+  </div>
+</div></div>
+
+<div class="modal" id="mPaste"><div class="sheet">
+  <h3>导入今日计划</h3>
+  <p class="tip">把 WorkBuddy 生成的计划原文（Markdown 表格：时段 | 任务 | 时长 | 动作 | 产出物）粘进来，解析后会替换时间轴。数据只存本机。</p>
+  <textarea id="pasteArea" style="height:160px"></textarea>
+  <div class="row">
+    <button class="primary" onclick="parsePaste()">解析并替换</button>
+    <button onclick="closeP()">取消</button>
+  </div>
+</div></div>
+
+<script>
+const KEY='dp_plan_v1';
+const PLAN_DEFAULT={
+  date:"2026-09-23", weekday:"周三",
+  title:"补天期第 1 天",
+  sub:"上午值班 + 13:15 组会",
+  constraint:"上午值班（做不了论文，但能听课刷题）→ 当天行测全部塞进值班时段；13:15 组会 1 小时 → 论文挪到组会后，晚上再补账 45min。",
+  items:[
+    ["07:30–08:10","【紧急】北京定向选调报名收尾（今天截止）","40min","登录核对信息 → 确认推荐表已提交/盖章 → 最终提交 → 截图保存报名成功页与序号","报名成功截图 + 报名序号"],
+    ["08:10–08:30","通勤到值班岗位","20min","路上听常识/时政音频","—"],
+    ["08:30–10:00","值班·行测 A：逻辑判断·翻译推理","1.5h","方法课 45min（前推后/后推前/且或规则表）→ 粉笔 5000 题刷 25 题","方法笔记 + 25 题正确率"],
+    ["10:00–10:30","值班·行测 B1：资料分析 2 篇（限时）","30min","每篇 ≤7 分钟，做完立刻对答案","用时 + 正确率记录"],
+    ["10:45–11:45","值班·行测 B2：数量·行程问题 15 题","1h","花生十三对应章节 + 粉笔 5000 题，不会的做标记","标记 3 道待回炉"],
+    ["11:45–12:00","值班·常识 15 题","15min","海海刷，碎片时间利用","常识记录"],
+    ["12:00–13:10","午饭 + 提前到组会现场","1.2h","留 10 分钟缓冲，别踩点","—"],
+    ["13:15–14:15","组会","1h","记录导师意见，会后转成论文待办清单","组会待办清单"],
+    ["14:30–16:00","论文（补值班占掉的缺口）","1.5h","只做 1 件可交付的事，不要开多个头","1 个论文产出"],
+    ["16:00–16:20","休息","20min","走动、喝水、远眺","—"],
+    ["16:20–17:30","申论：袁东·归纳概括 方法课","70min","边听边记框架（审题→找点→分类→概括）","一页方法笔记"],
+    ["17:30–18:30","晚饭 + 运动","1h","必须离开书桌","—"],
+    ["18:30–19:50","申论：归纳概括题 2 道（手写）","80min","写在答题纸上，不打字，计时完成","2 份手写答案"],
+    ["20:00–21:00","复盘 + 错题本 + 打卡表","1h","①错题归类 ②申论补要点 ③填打卡表","打卡表 1 行"],
+    ["21:00–21:45","论文补账（轻量）","45min","导出结果/读文献/记笔记这类能随时停的事","论文推进 1 步"],
+    ["21:45–22:30","洗漱 + 睡前","45min","翻一眼今天错的逻辑题，不开新坑","—"]
+  ],
+  hard:[
+    "北京报名今天截止 —— 07:30–08:10 必须收尾，唯一有硬 deadline 的事",
+    "逻辑判断翻译推理开张：课 45min + 25 题（放在值班时段）",
+    "申论第一次动笔：归纳概括 2 题手写"
+  ],
+  paper:"标准 3.5h → 今天只有 1.5h + 0.75h = 2.25h，缺 1.25h，9/26（周六）补回。红线：连续中断不超 3 天。",
+  risk:"晚上 18:30 那两道归纳概括，容易变成\"再看一节课算了\"。课能明天补，动笔不能拖。",
+  // 整体进度用
+  spanStart:"2026-09-23", spanEnd:"2026-11-29",
+  exams:[["湖南","2026-10-11"],["北京","2026-10-17"],["湖北","2026-10-18"],
+         ["四川","2026-10-24"],["贵州","2026-11-05"],["甘肃","2026-11-21"],["国考","2026-11-29"]],
+  stage:"P0 补天期（9/23–9/30）",
+  stageDays:[1,8]
+};
+
+function loadPlan(){try{const s=localStorage.getItem(KEY);
+  if(s){const o=JSON.parse(s); if(o&&o.items&&o.items.length) return o;}}catch(e){}
+  return JSON.parse(JSON.stringify(PLAN_DEFAULT));}
+function savePlan(){localStorage.setItem(KEY,JSON.stringify(PLAN));}
+let PLAN=loadPlan();
+const SKEY='dp_state_'+PLAN.date;
+function loadState(){try{return JSON.parse(localStorage.getItem(SKEY))||{}}catch(e){return{}}}
+let ST=loadState();
+function saveState(){localStorage.setItem(SKEY,JSON.stringify(ST));}
+const $=id=>document.getElementById(id);
+const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+const D=(s)=>{const m=String(s).match(/(\d{4})-(\d{2})-(\d{2})/); return m?new Date(+m[1],+m[2]-1,+m[3]):null;};
+const dayDiff=(a,b)=>Math.round((D(b)-D(a))/86400000);
+
+function render(){
+  $('hDate').textContent=PLAN.date+' · '+PLAN.weekday;
+  $('hTitle').textContent=PLAN.title||'';
+  $('hSub').textContent=PLAN.sub||'';
+  $('constraint').innerHTML='<b>约束：</b>'+esc(PLAN.constraint);
+  $('hard').innerHTML=(PLAN.hard||[]).map(x=>'<li>'+esc(x)+'</li>').join('');
+  $('paper').textContent=PLAN.paper||'';
+  $('risk').textContent=PLAN.risk||'';
+  renderOverall(); renderList(); updateProg(); markNow();
+}
+
+/* 整体备考进度 */
+function renderOverall(){
+  const s=D(PLAN.spanStart), e=D(PLAN.spanEnd), today=D(PLAN.date);
+  const total=(e-s)/86400000;
+  const passed=Math.max(0,Math.min(total,(today-s)/86400000));
+  const pctG=Math.round(passed/total*100);
+  const bar=$('tlBar');
+  let html='<i style="width:'+pctG+'%"></i>';
+  (PLAN.exams||[]).forEach(([n,d])=>{
+    const p=Math.max(0,Math.min(100,((D(d)-s)/86400000)/total*100));
+    const isNext=(D(d)-today)/86400000>=0 && (!PLAN._next||D(d)<D(PLAN._next));
+    html+='<div class="dot'+(isNext?' big':'')+'" style="left:'+p+'%"></div>'+
+          '<div class="lb" style="left:'+p+'%"><b>'+n+'</b>'+d.slice(5)+'</div>';
+  });
+  const pt=Math.max(0,Math.min(100,passed/total*100));
+  html+='<div class="today" style="left:'+pt+'%"></div><div class="todayLb" style="left:'+pt+'%">今天</div>';
+  bar.innerHTML=html;
+  const nx=(PLAN.exams||[]).find(([n,d])=>dayDiff(PLAN.date,d)>=0);
+  const sd=PLAN.stageDays||[1,8];
+  $('ovSub').textContent = pctG+'% · 距'+(nx?nx[0]+' '+dayDiff(PLAN.date,nx[1])+'天':'全部考完');
+  $('ovPill').innerHTML=
+    '<span>当前阶段 <b>'+esc(PLAN.stage)+'</b></span>'+
+    '<span>阶段进度 <b>Day '+sd[0]+' / '+sd[1]+'</b></span>'+
+    (nx?'<span>下一场 <b>'+nx[0]+' '+nx[1]+'</b>（'+dayDiff(PLAN.date,nx[1])+'天）</span>':'')+
+    '<span>剩余备考 <b>'+Math.max(0,dayDiff(PLAN.date,PLAN.spanEnd))+'天</b></span>';
+}
+
+/* 时间轴 */
+function renderList(){
+  const L=$('list'); L.innerHTML='';
+  (PLAN.items||[]).forEach((it,i)=>{
+    const st=ST[i]||{};
+    const d=document.createElement('div');
+    d.className='item '+(st.s?'s-'+st.s:''); d.id='it'+i;
+    d.innerHTML=
+      '<div class="tm">'+esc(it[0])+'</div><div class="box">'+
+      '<div class="hd"><div class="t">'+esc(it[1])+
+        (st.note?'<span class="badge">已反馈</span>':'')+'</div><div class="dur">'+esc(it[2])+'</div></div>'+
+      '<div class="meta"><span class="k">动作：</span>'+esc(it[3])+
+        '<br><span class="out">产出 · '+esc(it[4])+'</span></div>'+
+      '<div class="seg">'+
+        '<button class="'+(st.s==='done'?'on':'')+'" onclick="setS('+i+',\'done\')">✓ 完成</button>'+
+        '<button class="p '+(st.s==='partial'?'on p':'')+'" onclick="setS('+i+',\'partial\')">◐ 部分</button>'+
+        '<button class="s '+(st.s==='skip'?'on s':'')+'" onclick="setS('+i+',\'skip\')">↷ 跳过</button>'+
+        '<button class="n" onclick="toggleFb('+i+')">✎ 反馈</button>'+
+      '</div>'+
+      '<div class="fb'+(st.note||st.min?' show':'')+'" id="fb'+i+'">'+
+        '<div class="hint">写了什么 / 卡在哪 / 实际用时</div>'+
+        '<textarea rows="2" placeholder="例如：逻辑判断 25 题正确率 68%，削弱加强错得多" oninput="setN('+i+',this.value)">'+esc(st.note||'')+'</textarea>'+
+        '<input placeholder="实际用时" value="'+esc(st.min||'')+'" oninput="setM('+i+',this.value)">'+
+      '</div></div>';
+    L.appendChild(d);
+  });
+}
+function setS(i,s){const st=ST[i]||{}; st.s=(st.s===s?null:s); ST[i]=st; saveState();
+  renderList(); updateProg(); markNow(); if(st.s) notifyNow();}
+function setN(i,v){(ST[i]=ST[i]||{}).note=v; saveState();}
+function setM(i,v){(ST[i]=ST[i]||{}).min=v; saveState();}
+function toggleFb(i){const e=$('fb'+i); e.classList.toggle('show'); if(e.classList.contains('show')) e.querySelector('textarea').focus();}
+
+function updateProg(){
+  const n=(PLAN.items||[]).length; let dn=0,pt=0,sk=0;
+  (PLAN.items||[]).forEach((_,i)=>{const s=(ST[i]||{}).s;
+    if(s==='done')dn++; else if(s==='partial')pt++; else if(s==='skip')sk++;});
+  const pct=Math.round((dn+pt*0.5)/n*100);
+  const C=2*Math.PI*38;
+  $('arc').setAttribute('stroke-dasharray',C);
+  $('arc').setAttribute('stroke-dashoffset',C*(1-pct/100));
+  $('pct').textContent=pct+'%';
+  $('mDone').textContent=dn; $('mPart').textContent=pt; $('mSkip').textContent=sk;
+  $('mLeft').textContent=n-dn-pt-sk;
+}
+function mins(t){const m=String(t).match(/(\d{1,2}):(\d{2})/); return m?(+m[1])*60+(+m[2]):null;}
+function endMin(t){const p=String(t).split(/[–\-~]/); return mins(p[1])||mins(p[0])+1;}
+function markNow(){
+  const now=new Date(); const cur=now.getHours()*60+now.getMinutes();
+  let idx=-1,nx=-1;
+  (PLAN.items||[]).forEach((it,i)=>{
+    const a=mins(it[0]); if(a===null) return;
+    if(cur>=a&&cur<endMin(it[0])) idx=i;
+    const el=$('it'+i); if(el) el.classList.remove('active');
+  });
+  for(let i=0;i<(PLAN.items||[]).length;i++){const a=mins(PLAN.items[i][0]); if(a!==null&&a>cur){nx=i;break;}}
+  if(idx>=0){ const el=$('it'+idx); if(el) el.classList.add('active');
+    $('nowTxt').textContent='当前：'+PLAN.items[idx][0]+'　'+PLAN.items[idx][1]; }
+  else $('nowTxt').textContent = nx>=0 ? ('下一项：'+PLAN.items[nx][0]+'　'+PLAN.items[nx][1]) : '今天的时段都走完了 → 生成反馈';
+}
+setInterval(markNow,60000);
+
+/* ===== 休息 · 喝水 ===== */
+const HKEY='dp_health_'+PLAN.date;
+const HDEF={anchor:0,wanchor:0,cups:0,rests:0,gap:30,wgap:60,notify:true,vibe:true,restUntil:0,goal:8};
+const REST_MS=5*60000;
+let H=(function(){try{const o=JSON.parse(localStorage.getItem(HKEY));
+  if(o) return Object.assign({},HDEF,o);}catch(e){} return Object.assign({},HDEF);})();
+function saveH(){localStorage.setItem(HKEY,JSON.stringify(H));}
+const fmtMS=ms=>{const s=Math.max(0,Math.round(ms/1000));
+  return String(s/60|0).padStart(2,'0')+':'+String(s%60).padStart(2,'0');};
+
+function initHealth(){
+  const now=Date.now();
+  /* 长时间没打开（超过 2 个间隔）→ 重新计时，避免回来就狂弹 */
+  if(!H.anchor||H.anchor+H.gap*60000<now-H.gap*120000) H.anchor=now;
+  if(!H.wanchor||H.wanchor+H.wgap*60000<now-H.wgap*120000) H.wanchor=now;
+  if(H.restUntil&&H.restUntil<now-H.gap*120000) H.restUntil=0;
+  H._fired=false; H._wfired=false;
+  saveH();
+  $('selGap').value=H.gap; $('selWat').value=H.wgap;
+  $('ckNot').checked=!!H.notify; $('ckVib').checked=!!H.vibe;
+  renderHealth();
+  clearInterval(window._hT); window._hT=setInterval(hTick,1000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)hTick();});
+}
+function renderHealth(){
+  $('watNum').textContent=H.cups+' / '+H.goal+' 杯';
+  $('cups').innerHTML=Array.from({length:H.goal},(_,i)=>
+    '<div class="cup'+(i<H.cups?' on':'')+'"></div>').join('');
+  $('brkTip').textContent='每 '+H.gap+' 分钟起身 5 分钟'+(H.rests?' · 今日已休息 '+H.rests+' 次':'');
+  $('hlSub').textContent='已休息 '+H.rests+' 次 · 喝水 '+H.cups+'/'+H.goal+' 杯'
+    +(('Notification' in window&&Notification.permission!=='granted')?' · 点底部「锁屏提醒」开通知':'');
+  $('restWat').textContent=H.cups;
+  hTick();
+}
+function hTick(){
+  const now=Date.now();
+  /* 休息中 */
+  if(H.restUntil>now){
+    $('restBar').classList.add('show');
+    $('restCd').textContent=fmtMS(H.restUntil-now);
+    $('restProg').style.width=Math.round((1-(H.restUntil-now)/REST_MS)*100)+'%';
+    $('brkCd').textContent='休息中';
+    $('watTip').textContent='休息中，正好喝口水';
+    return;
+  }
+  if(H.restUntil&&H.restUntil<=now){ endRest(true); }
+  /* 距下次休息 */
+  const left=H.anchor+H.gap*60000-now;
+  if(left<=0){ if(!H._fired) fireBreak(); $('brkCd').textContent='00:00'; }
+  else { H._fired=false; $('brkCd').textContent=fmtMS(left); }
+  /* 距下次喝水 */
+  const wl=H.wanchor+H.wgap*60000-now;
+  if(wl<=0){
+    $('watTip').textContent='💧 该喝水了（'+H.cups+'/'+H.goal+' 杯）';
+    if(!H._wfired){ H._wfired=true; saveH();
+      notifyIt('💧 该喝水了','已喝 '+H.cups+'/'+H.goal+' 杯（约 '+H.cups*250+'ml），起身接一杯','dp-water'); buzz(); }
+  } else { H._wfired=false; $('watTip').textContent='下次喝水 '+fmtMS(wl); }
+}
+function fireBreak(){
+  H._fired=true; H.restUntil=Date.now()+REST_MS; H.rests=(H.rests||0)+1; saveH();
+  notifyIt('☕ 该休息了','起身走动 5 分钟 · 远眺放松眼睛 · 喝两口水','dp-break'); buzz();
+  renderHealth(); hTick();
+}
+function doBreak(){ fireBreak(); }
+function endRest(auto){
+  H.restUntil=0; H.anchor=Date.now(); H._fired=false; saveH();
+  $('restBar').classList.remove('show'); $('restProg').style.width='0';
+  if(!auto) notifyIt('▶ 继续','休息结束，回到当前任务','dp-break');
+  renderHealth();
+}
+function snooze(){
+  H.restUntil=0; H.anchor=Date.now()-(H.gap-5)*60000; H._fired=false; saveH();
+  $('restBar').classList.remove('show'); renderHealth();
+}
+function drink(){
+  H.cups=(H.cups||0)+1; H.wanchor=Date.now(); H._wfired=false;
+  if(H.cups>=H.goal) notifyIt('🎉 今日饮水达标','已喝 '+H.cups+' 杯（约 '+H.cups*250+'ml）','dp-water');
+  saveH(); renderHealth();
+}
+function setCfg(k,v){ H[k]=v; if(k==='wgap') H.wanchor=Date.now(); if(k==='gap') H.anchor=Date.now();
+  H._fired=false; H._wfired=false; saveH(); renderHealth(); }
+function notifyIt(t,b,tag){
+  if(!H.notify) return;
+  if(!('serviceWorker' in navigator)||!('Notification' in window)) return;
+  if(Notification.permission!=='granted') return;
+  navigator.serviceWorker.ready.then(r=>r.showNotification(t,{
+    body:b,tag:tag,renotify:true,requireInteraction:true,icon:'icon-192.png'
+  })).catch(()=>{});
+}
+function buzz(){ if(H.vibe&&navigator.vibrate){try{navigator.vibrate([220,120,220]);}catch(e){}} }
+function exportBreakIcs(){
+  const its=(PLAN.items||[]).map(i=>[mins(i[0]),endMin(i[0])]).filter(x=>x[0]!==null);
+  if(!its.length){alert('没识别到时段，先导入计划');return;}
+  const d=PLAN.date.replace(/-/g,''), pad=n=>String(n).padStart(2,'0');
+  const s0=Math.min(...its.map(x=>x[0])), e0=Math.max(...its.map(x=>x[1]));
+  let s='BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//DailyPlan//CN\nCALSCALE:GREGORIAN\n', k=0;
+  for(let t=s0+H.gap;t<e0;t+=H.gap,k++){
+    s+='BEGIN:VEVENT\nUID:'+d+'B'+k+'@dp\nDTSTAMP:'+d+'T000000Z\n'+
+       'DTSTART:'+d+'T'+pad(t/60|0)+pad(t%60)+'00\nDTEND:'+d+'T'+pad((t+5)/60|0)+pad((t+5)%60)+'00\n'+
+       'SUMMARY:☕ 休息 5 分钟（走动+远眺+喝水）\nDESCRIPTION:站起来走两步，远眺 20 秒放松眼睛，喝两口水\n'+
+       'BEGIN:VALARM\nTRIGGER:PT0M\nACTION:DISPLAY\nDESCRIPTION:该休息了\nEND:VALARM\nEND:VEVENT\n';
+  }
+  s+='END:VCALENDAR';
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([s],{type:'text/calendar;charset=utf-8'}));
+  a.download='休息提醒_'+PLAN.date+'.ics'; a.click();
+  alert('已导出约 '+k+' 条休息提醒（每 '+H.gap+' 分钟一次）。\n用日历 App 导入后，息屏也能准时响。');
+}
+
+/* 锁屏通知 */
+let notifyOn=false;
+function notifyNow(){
+  if(!notifyOn) return;
+  const now=new Date(); const cur=now.getHours()*60+now.getMinutes();
+  let curItem=null,nextItem=null;
+  (PLAN.items||[]).forEach(it=>{
+    const a=mins(it[0]); if(a===null) return;
+    if(cur>=a&&cur<endMin(it[0])) curItem=it;
+    if(a>cur&&!nextItem) nextItem=it;
+  });
+  let dn=0; (PLAN.items||[]).forEach((_,i)=>{if((ST[i]||{}).s==='done')dn++});
+  const body=(curItem?'进行中：'+curItem[1]:(nextItem?'下一项：'+nextItem[1]:'今日时段已结束'))
+    +' · 已完成 '+dn+'/'+(PLAN.items||[]).length+'（'+pctNow()+'%）'
+    +(H.restUntil>Date.now()?' · 休息中':' · 下次休息 '+fmtMS(H.anchor+H.gap*60000-Date.now()))
+    +' · 💧'+H.cups+'/'+H.goal;
+  navigator.serviceWorker.ready.then(r=>r.showNotification('📌 '+PLAN.date+' 今日计划',{
+    body:body,tag:'dp-now',renotify:true,requireInteraction:true,silent:true,icon:'icon-192.png'
+  })).catch(()=>{});
+}
+function pctNow(){let dn=0,pt=0,n=(PLAN.items||[]).length;
+  (PLAN.items||[]).forEach((_,i)=>{const s=(ST[i]||{}).s; if(s==='done')dn++; else if(s==='partial')pt++;});
+  return Math.round((dn+pt*0.5)/n*100);}
+$('btnNotify').onclick=async()=>{
+  if(!('serviceWorker' in navigator)||!('Notification' in window)){alert('当前浏览器不支持通知');return;}
+  const p=await Notification.requestPermission();
+  if(p!=='granted'){alert('需要通知权限。\n另外请在系统「设置 → 通知」里允许本站点在锁屏显示。');return;}
+  await navigator.serviceWorker.register('sw.js').catch(()=>{});
+  notifyOn=true; H.notify=true; saveH(); $('ckNot').checked=true;
+  $('btnNotify').textContent='提醒中 ✓'; notifyNow();
+  setInterval(notifyNow,5*60*1000);
+  alert('已开启：通知常驻显示「当前时段任务 + 完成进度」。\nAndroid 请在锁屏通知设置里打开显示详情。');
+};
+
+/* ics */
+$('btnIcs').onclick=()=>{
+  const pad=n=>String(n).padStart(2,'0'); const d=PLAN.date.replace(/-/g,'');
+  let s='BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//DailyPlan//CN\nCALSCALE:GREGORIAN\n';
+  (PLAN.items||[]).forEach((it,i)=>{
+    const a=mins(it[0]); if(a===null) return; const b=endMin(it[0]);
+    s+='BEGIN:VEVENT\nUID:'+d+'P'+i+'@dp\nDTSTAMP:'+d+'T000000Z\nDTSTART:'+d+'T'+pad(a/60|0)+pad(a%60)+'00\n'+
+       'DTEND:'+d+'T'+pad(b/60|0)+pad(b%60)+'00\nSUMMARY:'+it[1]+'\nDESCRIPTION:'+it[3]+
+       '\nBEGIN:VALARM\nTRIGGER:-PT5M\nACTION:DISPLAY\nDESCRIPTION:'+it[1]+'\nEND:VALARM\nEND:VEVENT\n';
+  });
+  s+='END:VCALENDAR';
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([s],{type:'text/calendar;charset=utf-8'}));
+  a.download='计划_'+PLAN.date+'.ics'; a.click();
+  alert('已导出 .ics，用日历 App 打开导入。桌面/锁屏加「日历」小部件即可看到当前时段，并提前 5 分钟提醒。');
+};
+
+/* 导入 */
+$('btnPaste').onclick=()=>{$('mPaste').classList.add('show');$('pasteArea').value='';};
+function closeP(){$('mPaste').classList.remove('show');}
+function parsePaste(){
+  const txt=$('pasteArea').value||''; const rows=[];
+  let date=PLAN.date,wd=PLAN.weekday,title=PLAN.title,sub=PLAN.sub,cons=PLAN.constraint;
+  const dm=txt.match(/(\d{4})[-年](\d{1,2})[-月](\d{1,2})/);
+  if(dm) date=dm[1]+'-'+String(+dm[2]).padStart(2,'0')+'-'+String(+dm[3]).padStart(2,'0');
+  const wm=txt.match(/（(周[一二三四五六日])）/); if(wm) wd=wm[1];
+  const cm=txt.match(/\*\*约束\*\*[：:](.*)/); if(cm) cons=cm[1].trim();
+  txt.split('\n').forEach(l=>{
+    if(!l.trim().startsWith('|')) return;
+    const c=l.split('|').slice(1,-1).map(x=>x.trim());
+    if(c.length<4||!/\d{1,2}:\d{2}/.test(c[0])) return;
+    rows.push([c[0],c[1],c[2]||'',c[3]||'',c[4]||'']);
+  });
+  if(!rows.length){alert('没解析到表格行，请粘贴完整计划表格');return;}
+  const hd=[...txt.matchAll(/^\d+\.\s+(.+)$/gm)].map(m=>m[1]);
+  const pm=txt.match(/\*\*论文账\*\*[：:](.*)/), rm=txt.match(/\*\*今天最容易翻车的点\*\*[：:](.*)/);
+  PLAN=Object.assign({},PLAN,{date:date,weekday:wd,title:title,sub:sub,constraint:cons,items:rows,
+    hard:hd.length?hd:PLAN.hard, paper:pm?pm[1].trim():PLAN.paper, risk:rm?rm[1].trim():PLAN.risk});
+  savePlan(); localStorage.removeItem(SKEY); location.reload();
+}
+
+/* 反馈 */
+const SN={done:'✅ 完成',partial:'◐ 部分完成',skip:'↷ 跳过'};
+function genText(){
+  let s='## '+PLAN.date+'（'+PLAN.weekday+'）完成情况反馈\n\n';
+  s+='**整体进度**：'+$('ovSub').textContent+'　|　**今日完成**：'+pctNow()+'%（已完成 '+$('mDone').textContent+
+      ' / 部分 '+$('mPart').textContent+' / 跳过 '+$('mSkip').textContent+'）\n\n';
+  s+='**休息/喝水**：起身休息 '+H.rests+' 次 · 喝水 '+H.cups+'/'+H.goal+' 杯（约 '+H.cups*250+'ml）\n\n';
+  s+='| 时段 | 任务 | 状态 | 实际用时 | 反馈 |\n| --- | --- | --- | --- | --- |\n';
+  (PLAN.items||[]).forEach((it,i)=>{const st=ST[i]||{};
+    s+='| '+it[0]+' | '+it[1]+' | '+(SN[st.s]||'未标记')+' | '+(st.min||'-')+' | '+(st.note||'')+' |\n';});
+  s+='\n### 逐项反馈\n';
+  (PLAN.items||[]).forEach((it,i)=>{const st=ST[i]||{};
+    if(st.note||st.s) s+='- ['+it[0]+'] '+it[1]+'：'+(SN[st.s]||'未标记')+(st.min?'（实际 '+st.min+'）':'')+(st.note?' — '+st.note:'')+'\n';});
+  s+='\n### 三件硬事\n';
+  (PLAN.hard||[]).forEach((h,i)=>{s+=(i+1)+'. '+h+' → \n';});
+  s+='\n### 其他\n- 论文今天推进了什么：\n- 导师/组会新要求：\n- 明天是否有固定占用（值班/组会）：\n- 卡住的地方 / 要调整计划的地方：\n';
+  return s;
+}
+$('btnGen').onclick=()=>{$('out').value=genText(); $('mOut').classList.add('show');};
+function closeM(){$('mOut').classList.remove('show');}
+function copyOut(){const t=$('out');t.select();t.setSelectionRange(0,99999);
+  if(navigator.clipboard)navigator.clipboard.writeText(t.value).then(()=>alert('已复制，粘贴回 WorkBuddy 即可'));
+  else document.execCommand('copy');}
+function downloadOut(){const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([$('out').value],{type:'text/markdown;charset=utf-8'}));
+  a.download='反馈_'+PLAN.date+'.md'; a.click();}
+render();
+initHealth();
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+</script>
+</body>
+</html>
