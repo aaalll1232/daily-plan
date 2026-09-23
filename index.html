@@ -179,6 +179,11 @@ ol.hard li{margin-bottom:2px}
 .sheet .row .primary{background:var(--brand);color:#fff;border-color:var(--brand)}
 #out{height:240px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.6}
 .foot{text-align:center;font-size:11.5px;color:var(--sub);padding:6px 0 16px}
+.toast{position:fixed;left:50%;top:14px;transform:translateX(-50%) translateY(-80px);
+  background:rgba(20,30,50,.92);color:#fff;font-size:13px;font-weight:600;padding:10px 16px;
+  border-radius:12px;box-shadow:0 6px 20px rgba(0,0,0,.25);z-index:60;opacity:0;
+  transition:transform .35s ease,opacity .35s ease;max-width:90%;text-align:center;pointer-events:none}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1}
 </style>
 </head>
 <body>
@@ -267,13 +272,15 @@ ol.hard li{margin-bottom:2px}
   <button class="primary" id="btnGen">生成反馈</button>
 </div>
 
+<div class="toast" id="toast"></div>
+
 <div class="rest" id="restBar">
   <div class="t">☕ 该休息了 · <span id="restCd">05:00</span></div>
   <div class="s">站起来走两步，远眺 20 秒放松眼睛<br>顺便喝两口水（今日已喝 <span id="restWat">0</span> 杯）</div>
   <div class="restbar"><i id="restProg"></i></div>
   <div class="row">
     <button class="g" onclick="endRest()">休息好了，回去学</button>
-    <button class="o" onclick="snooze()">再延后 5 分钟</button>
+    <button class="o" onclick="snooze()">再延长 5 分钟</button>
   </div>
 </div>
 
@@ -479,7 +486,7 @@ function renderHealth(){
   $('watNum').textContent=H.cups+' / '+H.goal+' 杯';
   $('cups').innerHTML=Array.from({length:H.goal},(_,i)=>
     '<div class="cup'+(i<H.cups?' on':'')+'"></div>').join('');
-  $('brkTip').textContent='每 '+H.gap+' 分钟起身 5 分钟'+(H.rests?' · 今日已休息 '+H.rests+' 次':'');
+  $('brkTip').textContent='建议每 '+H.gap+' 分钟起身（手动点开）'+(H.rests?' · 今日已休息 '+H.rests+' 次':'');
   $('hlSub').textContent='已休息 '+H.rests+' 次 · 喝水 '+H.cups+'/'+H.goal+' 杯'
     +(('Notification' in window&&Notification.permission!=='granted')?' · 点底部「锁屏提醒」开通知':'');
   $('restWat').textContent=H.cups;
@@ -497,10 +504,10 @@ function hTick(){
     return;
   }
   if(H.restUntil&&H.restUntil<=now){ endRest(true); }
-  /* 距下次休息 */
+  /* 距建议休息（仅提示，不自动弹；由你手动点开） */
   const left=H.anchor+H.gap*60000-now;
-  if(left<=0){ if(!H._fired) fireBreak(); $('brkCd').textContent='00:00'; }
-  else { H._fired=false; $('brkCd').textContent=fmtMS(left); }
+  H._fired=false;
+  $('brkCd').textContent = left>0 ? fmtMS(left) : '点按钮开始';
   /* 距下次喝水 */
   const wl=H.wanchor+H.wgap*60000-now;
   if(wl<=0){
@@ -522,8 +529,8 @@ function endRest(auto){
   renderHealth();
 }
 function snooze(){
-  H.restUntil=0; H.anchor=Date.now()-(H.gap-5)*60000; H._fired=false; saveH();
-  $('restBar').classList.remove('show'); renderHealth();
+  H.restUntil=(H.restUntil||Date.now())+REST_MS; H._fired=false; saveH();
+  $('restCd').textContent=fmtMS(H.restUntil-Date.now()); renderHealth(); hTick();
 }
 function drink(){
   H.cups=(H.cups||0)+1; H.wanchor=Date.now(); H._wfired=false;
@@ -614,8 +621,8 @@ $('btnIcs').onclick=()=>{
 /* 导入 */
 $('btnPaste').onclick=()=>{$('mPaste').classList.add('show');$('pasteArea').value='';};
 function closeP(){$('mPaste').classList.remove('show');}
-function parsePaste(){
-  const txt=$('pasteArea').value||''; const rows=[];
+function applyPlanText(txt){
+  const rows=[];
   let date=PLAN.date,wd=PLAN.weekday,title=PLAN.title,sub=PLAN.sub,cons=PLAN.constraint;
   const dm=txt.match(/(\d{4})[-年](\d{1,2})[-月](\d{1,2})/);
   if(dm) date=dm[1]+'-'+String(+dm[2]).padStart(2,'0')+'-'+String(+dm[3]).padStart(2,'0');
@@ -627,12 +634,33 @@ function parsePaste(){
     if(c.length<4||!/\d{1,2}:\d{2}/.test(c[0])) return;
     rows.push([c[0],c[1],c[2]||'',c[3]||'',c[4]||'']);
   });
-  if(!rows.length){alert('没解析到表格行，请粘贴完整计划表格');return;}
+  if(!rows.length) return false;
   const hd=[...txt.matchAll(/^\d+\.\s+(.+)$/gm)].map(m=>m[1]);
   const pm=txt.match(/\*\*论文账\*\*[：:](.*)/), rm=txt.match(/\*\*今天最容易翻车的点\*\*[：:](.*)/);
   PLAN=Object.assign({},PLAN,{date:date,weekday:wd,title:title,sub:sub,constraint:cons,items:rows,
     hard:hd.length?hd:PLAN.hard, paper:pm?pm[1].trim():PLAN.paper, risk:rm?rm[1].trim():PLAN.risk});
-  savePlan(); localStorage.removeItem(SKEY); location.reload();
+  savePlan(); localStorage.removeItem(SKEY);
+  return true;
+}
+function parsePaste(){
+  const txt=$('pasteArea').value||'';
+  if(!applyPlanText(txt)){alert('没解析到表格行，请粘贴完整计划表格');return;}
+  location.reload();
+}
+/* 自动识别最新计划：每次打开页面拉取同目录 plan.md，日期比当前新则自动替换 */
+async function tryAutoPlan(){
+  try{
+    const r=await fetch('plan.md?t='+Date.now(),{cache:'no-store'});
+    if(!r.ok) return;
+    const txt=await r.text();
+    const dm=txt.match(/(\d{4})[-年](\d{1,2})[-月](\d{1,2})/);
+    if(!dm) return;
+    const nd=dm[1]+'-'+String(+dm[2]).padStart(2,'0')+'-'+String(+dm[3]).padStart(2,'0');
+    if(nd>PLAN.date){
+      localStorage.setItem('dp_lastauto',nd);
+      if(applyPlanText(txt)) location.reload();
+    }
+  }catch(e){}
 }
 
 /* 反馈 */
@@ -661,9 +689,14 @@ function copyOut(){const t=$('out');t.select();t.setSelectionRange(0,99999);
 function downloadOut(){const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([$('out').value],{type:'text/markdown;charset=utf-8'}));
   a.download='反馈_'+PLAN.date+'.md'; a.click();}
+function toast(m){const t=$('toast');if(!t)return;t.textContent=m;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3600);}
 render();
 initHealth();
 if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+const _la=localStorage.getItem('dp_lastauto');
+if(_la&&_la===PLAN.date){ toast('已自动更新为 '+PLAN.date+' 计划 ✔'); localStorage.removeItem('dp_lastauto'); }
+tryAutoPlan();
 </script>
 </body>
 </html>
