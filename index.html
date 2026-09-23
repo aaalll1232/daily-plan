@@ -376,6 +376,17 @@ function loadPlan(){try{const s=localStorage.getItem(KEY);
   return JSON.parse(JSON.stringify(PLAN_DEFAULT));}
 function savePlan(){localStorage.setItem(KEY,JSON.stringify(PLAN));}
 let PLAN=loadPlan();
+/* 自愈：若本机存的计划日期晚于「本机今天」，说明被过早切换过，回退到对应的历史快照
+   （快照存在 dp_snap_<date>，由每次切换前自动留档） */
+(function(){
+  const d=new Date(), today=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  // 保证 9.23 基线快照存在（内置默认计划即 9.23）
+  try{ if(!localStorage.getItem('dp_snap_'+PLAN_DEFAULT.date)) localStorage.setItem('dp_snap_'+PLAN_DEFAULT.date,JSON.stringify(PLAN_DEFAULT)); }catch(e){}
+  if(PLAN.date && PLAN.date>today){
+    const snap=localStorage.getItem('dp_snap_'+PLAN.date)||localStorage.getItem('dp_snap_'+today);
+    if(snap){try{PLAN=JSON.parse(snap); localStorage.setItem(KEY,JSON.stringify(PLAN));}catch(e){}}
+  }
+})();
 const SKEY='dp_state_'+PLAN.date;
 function loadState(){try{const raw=localStorage.getItem(SKEY);
   if(!raw) return JSON.parse(JSON.stringify(PLAN_DEFAULT.states||{}));
@@ -670,6 +681,7 @@ function applyPlanText(txt){
   const pm=txt.match(/\*\*论文账\*\*[：:](.*)/), rm=txt.match(/\*\*今天最容易翻车的点\*\*[：:](.*)/);
   PLAN=Object.assign({},PLAN,{date:date,weekday:wd,title:title,sub:sub,constraint:cons,items:rows,
     hard:hd.length?hd:PLAN.hard, paper:pm?pm[1].trim():PLAN.paper, risk:rm?rm[1].trim():PLAN.risk});
+  try{localStorage.setItem('dp_snap_'+PLAN.date,JSON.stringify(PLAN));}catch(e){}  // 留档，便于回退
   savePlan(); localStorage.removeItem(SKEY);
   return true;
 }
@@ -678,7 +690,10 @@ function parsePaste(){
   if(!applyPlanText(txt)){alert('没解析到表格行，请粘贴完整计划表格');return;}
   location.reload();
 }
-/* 自动识别最新计划：每次打开页面拉取同目录 plan.md，日期比当前新则自动替换 */
+/* 自动识别最新计划：每次打开页面拉取同目录 plan.md。
+   闸门：只有当「本机今天的日期」已经超过当前计划日期时，才允许切换到更新的计划，
+   避免当天还没过完就被次日计划顶掉（历史 bug：9.23 未过完就显示成 9.24）。 */
+function todayStr(){const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 async function tryAutoPlan(){
   try{
     const r=await fetch('plan.md?t='+Date.now(),{cache:'no-store'});
@@ -687,7 +702,8 @@ async function tryAutoPlan(){
     const dm=txt.match(/(\d{4})[-年](\d{1,2})[-月](\d{1,2})/);
     if(!dm) return;
     const nd=dm[1]+'-'+String(+dm[2]).padStart(2,'0')+'-'+String(+dm[3]).padStart(2,'0');
-    if(nd>PLAN.date){
+    // 条件1：新计划日期要更晚；条件2：只有本机今天已过期，才切换（当天未过不换）
+    if(nd>PLAN.date && todayStr()>PLAN.date){
       localStorage.setItem('dp_lastauto',nd);
       if(applyPlanText(txt)) location.reload();
     }
