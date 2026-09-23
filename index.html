@@ -359,15 +359,25 @@ const PLAN_DEFAULT={
          ["四川","2026-10-24"],["贵州","2026-11-05"],["甘肃","2026-11-21"],["国考","2026-11-29"]],
   stage:"P0 补天期（9/23–9/30）",
   stageDays:[1,8],
-  /* 9.23 上午实况打卡（用户 16:51 反馈，预置；手机 localStorage 无记录时回退到此） */
+  /* 9.23 全天最终打卡（用户 23:49 反馈：11 完成/5 跳过，69%）；statesDate 限定防误用到其他天 */
+  statesDate:"2026-09-23",
   states:{
-    0:{s:"done",note:"改为中午看 8 点刷新的报录比后再投"},
+    0:{s:"done",note:"中午按报录比完成报名；补充材料待交"},
     1:{s:"done",note:"25 才起床 → 37 到岗；40 收拾完"},
     2:{s:"done",min:"课约 2.5h（含被老师派活打断）",note:"课程实际 3.5h，2.5 倍速到 11:17 才看完；写题 15min，做的是粉笔削弱题型，错 7/25"},
     3:{s:"done",min:"16min",note:"资料分析 2 篇，错 3/10；粗心看错类别、除法不熟"},
+    4:{s:"done",note:"按顺序学的几何 18.27 听完课；练习做的是星期 3/3 全对，但速度慢有卡壳"},
     5:{s:"done",note:"粉笔文学常识 1–15 题"},
     6:{s:"done"},
-    7:{s:"done",note:"组会：老师认为现有条件无法研究清不一致成因，要求先找到一条研究主线"}
+    7:{s:"done",min:"14:15 结束",note:"组会：老师认为现有条件无法研究清不一致成因，要求先找到一条研究主线"},
+    8:{s:"skip"},
+    9:{s:"skip",note:"北京定选需要补充材料，在准备材料"},
+    10:{s:"skip"},
+    11:{s:"done",note:"18:42 才去吃饭"},
+    12:{s:"done",min:"1h40min",note:"实际学的是袁东申论大作文第二课（未动笔写题）"},
+    13:{s:"skip"},
+    14:{s:"skip"},
+    15:{s:"done"}
   }
 };
 
@@ -389,7 +399,8 @@ let PLAN=loadPlan();
 })();
 const SKEY='dp_state_'+PLAN.date;
 function loadState(){try{const raw=localStorage.getItem(SKEY);
-  if(!raw) return JSON.parse(JSON.stringify(PLAN_DEFAULT.states||{}));
+  // states 预置只属于其对应日期（statesDate），切到其他天绝不能误用
+  if(!raw && PLAN.date===PLAN_DEFAULT.statesDate) return JSON.parse(JSON.stringify(PLAN_DEFAULT.states||{}));
   return JSON.parse(raw)||{};}catch(e){return{}}}
 let ST=loadState();
 function saveState(){localStorage.setItem(SKEY,JSON.stringify(ST));}
