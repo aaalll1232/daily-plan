@@ -691,9 +691,16 @@ function parsePaste(){
   location.reload();
 }
 /* 自动识别最新计划：每次打开页面拉取同目录 plan.md。
-   闸门：只有当「本机今天的日期」已经超过当前计划日期时，才允许切换到更新的计划，
-   避免当天还没过完就被次日计划顶掉（历史 bug：9.23 未过完就显示成 9.24）。 */
+   闸门（2026-09-23 约定）：**每天早上 6:00 才切到当天计划**。
+   具体判定：本机当前时刻若已过 6:00，则"可上线日期"= 今天；未到 6:00 则为昨天。
+   只有 plan.md 的日期 > 当前计划日期，且 plan.md 日期 <= 可上线日期，才切换。
+   这样 23 号当天打开不会变成 24 号；24 号早上 6 点后打开才会自动切到 24 号。 */
 function todayStr(){const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
+function releaseLimit(){ // 6:00 前仍算昨天
+  const d=new Date();
+  if(d.getHours()<6) d.setDate(d.getDate()-1);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
 async function tryAutoPlan(){
   try{
     const r=await fetch('plan.md?t='+Date.now(),{cache:'no-store'});
@@ -702,10 +709,13 @@ async function tryAutoPlan(){
     const dm=txt.match(/(\d{4})[-年](\d{1,2})[-月](\d{1,2})/);
     if(!dm) return;
     const nd=dm[1]+'-'+String(+dm[2]).padStart(2,'0')+'-'+String(+dm[3]).padStart(2,'0');
-    // 条件1：新计划日期要更晚；条件2：只有本机今天已过期，才切换（当天未过不换）
-    if(nd>PLAN.date && todayStr()>PLAN.date){
+    const lim=releaseLimit();
+    // 更晚的新计划 + 已到可上线时间 → 切换；否则保持当天计划不动
+    if(nd>PLAN.date && nd<=lim){
       localStorage.setItem('dp_lastauto',nd);
       if(applyPlanText(txt)) location.reload();
+    }else if(nd>PLAN.date && nd>lim){
+      // 服务器上已放了次日计划但还没到 6:00（或本地时间未到）→ 不动，静默等待
     }
   }catch(e){}
 }
