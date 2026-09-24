@@ -1,11 +1,11 @@
 /* 定选每日计划 - Service Worker
  * 策略：缓存优先 + 后台更新（stale-while-revalidate）
  * 核心文件全部本地缓存，保证手机端离线可用（打卡状态本就存 localStorage）。 */
-const CACHE = 'daily-plan-v5';
+const CACHE = 'daily-plan-v6';
+/* plan.md 不进预缓存：install 时缓存一份，之后页面拿到的一定是当天的旧版 */
 const ASSETS = [
   './',
   './index.html',
-  './plan.md',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
@@ -28,11 +28,32 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+
+  /* plan.md 必须「网络优先」：
+     旧策略（stale-while-revalidate + ignoreSearch）会先返回缓存里的旧计划，
+     导致当天第一次打开看到的是昨天的计划（9.24 早上看到 9.23 的 bug）。
+     断网时才回退缓存。 */
+  if (url.pathname.endsWith('plan.md')) {
+    e.respondWith(
+      fetch(e.request)
+        .then((res) => {
+          if (res && res.ok && url.origin === self.location.origin) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(e.request, copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match(e.request, { ignoreSearch: true }))
+    );
+    return;
+  }
+
   e.respondWith(
     caches.match(e.request, { ignoreSearch: true }).then((hit) => {
       const fetching = fetch(e.request)
         .then((res) => {
-          if (res && res.ok && new URL(e.request.url).origin === self.location.origin) {
+          if (res && res.ok && url.origin === self.location.origin) {
             const copy = res.clone();
             caches.open(CACHE).then((c) => c.put(e.request, copy));
           }
