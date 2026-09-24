@@ -720,13 +720,13 @@ async function tryAutoPlan(){
     const dm=txt.match(/(\d{4})[-年](\d{1,2})[-月](\d{1,2})/);
     if(!dm) return;
     const nd=dm[1]+'-'+String(+dm[2]).padStart(2,'0')+'-'+String(+dm[3]).padStart(2,'0');
-    const lim=releaseLimit();
-    // 更晚的新计划 + 已到可上线时间 → 切换；否则保持当天计划不动
-    if(nd>PLAN.date && nd<=lim){
+    const today=todayStr();
+    /* 切换闸门（2026-09-25 修订）：plan.md 日期不超过“本地今天”就允许切换；
+       只有 plan.md 比今天还晚（提前一天生成了次日计划）时才不切，跨过午夜变成今天即放行。
+       铁律“当天未过完不提前显示次日”仍成立——当天不可能出现 nd>today。 */
+    if(nd>PLAN.date && nd<=today){
       localStorage.setItem('dp_lastauto',nd);
       if(applyPlanText(txt)) location.reload();
-    }else if(nd>PLAN.date && nd>lim){
-      // 服务器上已放了次日计划但还没到 6:00（或本地时间未到）→ 不动，静默等待
     }
   }catch(e){}
 }

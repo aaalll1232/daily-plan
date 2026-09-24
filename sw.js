@@ -1,7 +1,7 @@
 /* 定选每日计划 - Service Worker
  * 策略：缓存优先 + 后台更新（stale-while-revalidate）
  * 核心文件全部本地缓存，保证手机端离线可用（打卡状态本就存 localStorage）。 */
-const CACHE = 'daily-plan-v6';
+const CACHE = 'daily-plan-v7';
 /* plan.md 不进预缓存：install 时缓存一份，之后页面拿到的一定是当天的旧版 */
 const ASSETS = [
   './',
