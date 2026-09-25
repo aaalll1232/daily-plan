@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1F3864">
+<title>摘抄复盘 · 申论晨读</title>
+<link rel="icon" href="../icon-192.png">
+<style>
+:root{--bg:#F5F7FA;--card:#fff;--ink:#1B2430;--sub:#7A869A;--line:#EAEEF4;
+--brand:#1F3864;--brand2:#3A6EAF;--accent:#2E9E6B;--warn:#C0563B;--r:16px;
+--sh:0 2px 10px rgba(24,40,70,.06);}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--ink);
+font:15px/1.7 -apple-system,BlinkMacSystemFont,"PingFang SC","Noto Sans CJK SC","Microsoft YaHei",sans-serif;
+padding-bottom:40px}
+.wrap{max-width:640px;margin:0 auto;padding:14px 14px 0}
+.hero{background:linear-gradient(135deg,#24406E,#1F3864);color:#fff;border-radius:20px;
+padding:16px 18px;box-shadow:0 6px 18px rgba(31,56,100,.22);margin-bottom:12px}
+.hero .d1{font-size:13px;opacity:.85;letter-spacing:.5px}
+.hero .d2{font-size:20px;font-weight:700;margin-top:2px}
+.hero .d3{font-size:12.5px;opacity:.82;margin-top:5px;line-height:1.6}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px}
+.stat{background:#fff;border-radius:14px;box-shadow:var(--sh);padding:10px 6px;text-align:center}
+.stat b{display:block;font-size:19px;color:var(--brand);line-height:1.2}
+.stat span{font-size:11.5px;color:var(--sub)}
+.panel{background:#fff;border-radius:var(--r);box-shadow:var(--sh);padding:12px 14px;margin-bottom:12px}
+.panel .pt{font-size:13.5px;font-weight:700;color:var(--brand);margin-bottom:8px}
+.chips{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+.chip{flex:none;background:#EAF2FB;color:var(--brand2);border-radius:16px;padding:5px 12px;
+font-size:12.5px;font-weight:600;border:1px solid transparent;cursor:pointer;white-space:nowrap}
+.chip.on{background:var(--brand);color:#fff}
+.chip i{font-style:normal;opacity:.65;margin-left:3px}
+.row{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.btn{background:#fff;border:1px solid var(--line);color:var(--brand);border-radius:18px;
+padding:7px 13px;font-size:13px;font-weight:600;font-family:inherit;box-shadow:var(--sh);cursor:pointer}
+.btn:active{background:#EEF2F8}
+.btn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+input[type=search]{flex:1;min-width:150px;border:1px solid var(--line);border-radius:18px;
+padding:7px 13px;font-size:13px;font-family:inherit;color:var(--ink);background:#fff}
+.it{background:#fff;border-radius:var(--r);box-shadow:var(--sh);padding:13px 15px;margin-bottom:10px;
+border-left:4px solid var(--brand2)}
+.it.used{opacity:.5;border-left-color:#C9D2E0}
+.it.phrase{border-left-color:#E5A23C}
+.it .tx{font-size:15.3px;line-height:1.85;color:#243247}
+.it.phrase .tx{font-size:14.5px;color:#5A4A1E}
+.it .mt{display:flex;gap:7px;align-items:center;margin-top:9px;flex-wrap:wrap}
+.tag{display:inline-block;background:#EAF2FB;color:var(--brand2);border-radius:6px;
+padding:1px 7px;font-size:12px;font-weight:700}
+.tag.big{background:var(--brand);color:#fff}
+.tag.sm{background:#F2F5F9;color:#8A94A6;font-weight:500;font-size:11.5px}
+.it .dt{font-size:11.5px;color:var(--sub)}
+.it .src{font-size:11.5px;color:var(--sub);font-style:italic}
+.ibtn{margin-left:auto;background:none;border:1px solid var(--line);border-radius:14px;
+padding:3px 11px;font-size:12px;color:var(--brand);font-family:inherit;cursor:pointer;white-space:nowrap}
+.ibtn.on{background:var(--accent);color:#fff;border-color:var(--accent)}
+.ibtn.say{color:var(--brand2)}
+.empty{text-align:center;color:var(--sub);font-size:13px;padding:24px 0}
+.foot{text-align:center;font-size:12px;color:var(--sub);padding:6px 0 20px;line-height:1.7}
+.draw{background:#FFF8E8;border-left:4px solid #E5A23C;border-radius:0 12px 12px 0;
+padding:11px 13px;font-size:13px;color:#5A4A1E;margin-bottom:12px;line-height:1.7;display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="hero">
+    <div class="d1">摘抄复盘 · 把抄过的变成能用的</div>
+    <div class="d2">按主题翻 · 标用过 · 随机抽背</div>
+    <div class="d3">「未用过」的句子才是你考前真正要背的。写进过作文的点一下「标为已用」，剩下就是漏洞。</div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b id="s1">0</b><span>累计</span></div>
+    <div class="stat"><b id="s2">0</b><span>已用</span></div>
+    <div class="stat"><b id="s3">0</b><span>未用</span></div>
+    <div class="stat"><b id="s4">0</b><span>近7天</span></div>
+  </div>
+
+  <div class="draw" id="draw">🎲 抽签模式：下面 5 句是随机抽的，背完点「标为已用」，再抽下一组。</div>
+
+  <div class="panel">
+    <div class="pt">按大类复盘（数字 = 未用 / 总数）</div>
+    <div class="chips" id="chips"></div>
+    <div class="row">
+      <button class="btn" id="bu" onclick="setUnused(!onlyUnused)">只看未用过</button>
+      <button class="btn" id="dbtn" onclick="drawMode?drawMode=false,render():draw()">随机抽 5 句</button>
+    </div>
+    <div class="row">
+      <input type="search" placeholder="搜句子或主题关键字…" oninput="setKw(this.value)">
+    </div>
+    <div class="row">
+      <span class="dt" style="font-size:11.5px;color:var(--sub)">当前显示 <b id="cnt">0</b> 条 · 库内共 27 条（页面只放最近 120 天）</span>
+    </div>
+  </div>
+
+  <div id="list"></div>
+
+  <div class="panel">
+    <div class="pt">标记备份（换手机 / 清缓存不丢）</div>
+    <div class="row">
+      <button class="btn" onclick="exportUsed()">导出已用清单</button>
+      <label class="btn" style="position:relative;overflow:hidden">导入恢复
+        <input type="file" accept=".json" style="position:absolute;left:0;top:0;opacity:0;width:100%;height:100%"
+               onchange="importUsed(this)"></label>
+      <a class="btn" style="text-decoration:none" href="index.html">← 今日晨读包</a>
+    </div>
+  </div>
+
+  <div class="foot">摘抄库随每日晨读包自动累积 · 更新于 2026-09-26 02:32<br>
+  标记存在本机浏览器里，换设备记得先导出</div>
+</div>
+<script>
+var DATA = [{"id": "6d71ba56e7", "date": "2026-09-26", "type": "金句", "big": "政绩观·党性修养", "topics": ["政绩观", "青年干部"], "text": "既要做显功，也要做潜功，不计较个人功名，追求人民群众的好口碑、历史沉淀之后真正的评价。", "src": "习近平"}, {"id": "a931ba6cbb", "date": "2026-09-26", "type": "金句", "big": "生态文明·绿色发展", "topics": ["生态营造", "久久为功"], "text": "悉心培土者，终得满目苍翠；涵养生态者，自有万千气象。", "src": ""}, {"id": "30d03bccb8", "date": "2026-09-26", "type": "金句", "big": "为民·民生·基层", "topics": ["人民至上", "民生"], "text": "把&quot;发展账&quot;算准、把&quot;民心账&quot;算实。", "src": ""}, {"id": "b213e11820", "date": "2026-09-26", "type": "金句", "big": "政绩观·党性修养", "topics": ["政绩观", "群众工作"], "text": "不算一时得失，要算民心向背。", "src": ""}, {"id": "4f7b8fdc1f", "date": "2026-09-26", "type": "金句", "big": "创新·人才·教育", "topics": ["科技创新", "自立自强"], "text": "坚持做难而正确的事，不图一时之利。", "src": ""}, {"id": "538c904613", "date": "2026-09-26", "type": "金句", "big": "创新·人才·教育", "topics": ["人才评价", "科研生态"], "text": "耐心资本支持&quot;慢工细活&quot;，评价体系包容&quot;十年不鸣&quot;。", "src": ""}, {"id": "993cedf7f9", "date": "2026-09-26", "type": "金句", "big": "为民·民生·基层", "topics": ["基层治理", "公共服务"], "text": "治理的精度往往体现在具体的场景里。", "src": ""}, {"id": "4b1499d97a", "date": "2026-09-26", "type": "金句", "big": "为民·民生·基层", "topics": ["调查研究", "为民服务"], "text": "用心用情倾听群众的呼声，读懂时代的脚步声。", "src": ""}, {"id": "8bdbe5d382", "date": "2026-09-26", "type": "金句", "big": "为民·民生·基层", "topics": ["公共服务", "民生保障"], "text": "以制度善意回应期盼。", "src": ""}, {"id": "7cdae87a16", "date": "2026-09-26", "type": "金句", "big": "生态文明·绿色发展", "topics": ["生态文明", "绿色发展"], "text": "能源转型是一场考验耐力与智慧的长跑。", "src": ""}, {"id": "b7c90a2762", "date": "2026-09-26", "type": "金句", "big": "高质量发展·产业", "topics": ["高质量发展", "辩证思维"], "text": "把握&quot;稳&quot;与&quot;进&quot;，统筹&quot;量&quot;与&quot;质&quot;。", "src": ""}, {"id": "c316302985", "date": "2026-09-26", "type": "金句", "big": "为民·民生·基层", "topics": ["系统思维", "兜底保障"], "text": "阳光充沛时，煤电主动压低负荷，为清洁能源让出空间；夜幕降临、风力减弱时，煤电迅速顶上，守住不&quot;拉闸限电&quot;的民生底线。", "src": ""}, {"id": "c87119dc50", "date": "2026-09-26", "type": "金句", "big": "开放·合作·全球治理", "topics": ["团结合作", "共建共享"], "text": "心齐，则力聚。齐行，则事成。齐享，则共赢。", "src": ""}, {"id": "c7a083c3b9", "date": "2026-09-26", "type": "金句", "big": "开放·合作·全球治理", "topics": ["国际合作", "人类命运共同体"], "text": "世界各国不是一个个封闭的孤岛，而是命运相系、休戚与共的伙伴。保护主义、脱钩断链没有未来。", "src": "习近平"}, {"id": "455fc6a8cf", "date": "2026-09-26", "type": "金句", "big": "治理·法治·安全", "topics": ["外交", "全球治理"], "text": "均衡有序、遵守法治是必然要求……我们要弘扬全人类共同价值，摒弃双重标准、例外主义、干涉霸凌、丛林法则，推进国际关系法治化。大国尤其要带头守规矩、讲法治。", "src": "习近平 2026年9月1日&quot;上海合作组织+&quot;会议上的讲话"}, {"id": "329c54d990", "date": "2026-09-26", "type": "金句", "big": "治理·法治·安全", "topics": ["安全观"], "text": "中方愿同各方践行共同、综合、合作、可持续的安全观。", "src": ""}, {"id": "8559c8308b", "date": "2026-09-26", "type": "金句", "big": "治理·法治·安全", "topics": ["安全观"], "text": "坚持安全为要，营造普遍安全的环境。", "src": "习近平 2026年9月1日上海合作组织成员国元首理事会第二十六次会议"}, {"id": "f3885245a7", "date": "2026-09-26", "type": "金句", "big": "为民·民生·基层", "topics": ["人才", "技能", "就业"], "text": "要发展更有民生温度的技能，加大投资于人力度……要发展更具创新活力的技能……要发展更加开放包容的技能。", "src": "李强 2026年9月23日 2026年世界技能大会开幕式致辞"}, {"id": "a09191dbce", "date": "2026-09-26", "type": "金句", "big": "方法论·万能句", "topics": ["方法论", "万能句"], "text": "保持定力、下慢功夫。", "src": "人民日报评论员观察《舍得在&quot;看不见的地方&quot;下功夫》，9月17日"}, {"id": "b16194b558", "date": "2026-09-26", "type": "金句", "big": "方法论·万能句", "topics": ["方法论", "万能句"], "text": "调查研究是谋事之基、成事之道。", "src": "求是网时评高频句"}, {"id": "31c845e086", "date": "2026-09-26", "type": "短语", "big": "政绩观·党性修养", "topics": ["政绩观", "久久为功", "打基础"], "text": "一张蓝图绘到底 · 一年接着一年干 · 沉下心下足功夫 · 万木成林非一日之功 · 既做显功也做潜功", "src": ""}, {"id": "466275c320", "date": "2026-09-26", "type": "短语", "big": "方法论·万能句", "topics": ["工作方法", "精准施策"], "text": "因地制宜 · 分类施策 · 循序渐进 · 精准适配 · 向前一步 · 想深一层 · 见微知著 · 未雨绸缪", "src": ""}, {"id": "1805cc23a8", "date": "2026-09-26", "type": "短语", "big": "为民·民生·基层", "topics": ["公共服务", "基层治理"], "text": "紧扣现实场景 · 读懂群众心声 · 服务找人 · 随人而动 · 从日常烟火中找准坐标 · 以制度善意回应期盼", "src": ""}, {"id": "e8b44e5109", "date": "2026-09-26", "type": "短语", "big": "创新·人才·教育", "topics": ["创新生态", "产业培育"], "text": "有资本托举 · 有平台承载 · 有人才支撑 · 有制度保障 · 既育种又护苗还培土", "src": ""}, {"id": "795b0b090e", "date": "2026-09-26", "type": "短语", "big": "生态文明·绿色发展", "topics": ["能源", "生态文明"], "text": "清洁低碳 · 安全充裕 · 经济高效 · 供需协同 · 灵活智能", "src": ""}, {"id": "fffc14c19c", "date": "2026-09-26", "type": "短语", "big": "开放·合作·全球治理", "topics": ["合作共赢", "对外开放"], "text": "和而不同 · 多元共生 · 齐心协力 · 同心打拼 · 共商共建共享", "src": ""}, {"id": "5e25d5b01b", "date": "2026-09-26", "type": "短语", "big": "为民·民生·基层", "topics": ["兜底", "系统思维"], "text": "拉得出、顶得上 · 压舱石 · 兜底保障 · 账账相连、笔笔千钧", "src": ""}];
+var BIG_ORDER = ["政绩观·党性修养", "为民·民生·基层", "创新·人才·教育", "高质量发展·产业", "生态文明·绿色发展", "治理·法治·安全", "文化·精神·文明", "开放·合作·全球治理", "方法论·万能句", "其他·待归类"];
+var USED = {};
+try { USED = JSON.parse(localStorage.getItem('rv_used') || '{}'); } catch (e) { USED = {}; }
+function save() { try { localStorage.setItem('rv_used', JSON.stringify(USED)); } catch (e) {} }
+var topic = '__all__', onlyUnused = false, kw = '', drawMode = false, drawIds = [];
+
+function esc(s){return s;}
+function el(id){return document.getElementById(id);}
+
+function bigList() {
+  var m = {};
+  DATA.forEach(function (d) {
+    if (!m[d.big]) m[d.big] = { t: 0, u: 0 };
+    m[d.big].t++;
+    if (!USED[d.id]) m[d.big].u++;
+  });
+  var a = [];
+  BIG_ORDER.forEach(function (b) { if (m[b]) a.push([b, m[b].u, m[b].t]); });
+  Object.keys(m).forEach(function (k) { if (BIG_ORDER.indexOf(k) < 0) a.push([k, m[k].u, m[k].t]); });
+  return a;
+}
+function renderChips() {
+  var un = DATA.filter(function (d) { return !USED[d.id]; }).length;
+  var h = '<div class="chip' + (topic === '__all__' ? ' on' : '') + '" onclick="setTopic(\'__all__\')">全部<i>' + un + '/' + DATA.length + '</i></div>';
+  bigList().forEach(function (p) {
+    h += '<div class="chip' + (topic === p[0] ? ' on' : '') + '" onclick="setTopic(\'' + p[0].replace(/'/g, '') + '\')">' + p[0] + '<i>' + p[1] + '/' + p[2] + '</i></div>';
+  });
+  el('chips').innerHTML = h;
+}
+function setTopic(t) { topic = t; drawMode = false; render(); }
+function setUnused(b) { onlyUnused = b; el('bu').className = 'btn' + (b ? ' on' : ''); drawMode = false; render(); }
+function setKw(v) { kw = v.trim(); drawMode = false; render(); }
+function toggle(id) {
+  if (USED[id]) delete USED[id]; else USED[id] = 1;
+  save(); render();
+}
+function match(d) {
+  if (topic !== '__all__' && d.big !== topic) return false;
+  if (onlyUnused && USED[d.id]) return false;
+  if (kw && d.text.indexOf(kw) < 0 && d.topics.join('').indexOf(kw) < 0 && d.big.indexOf(kw) < 0) return false;
+  return true;
+}
+function say(btn, txt) {
+  if (!('speechSynthesis' in window)) { btn.textContent = '不支持'; return; }
+  if (window.__spk === btn) { window.speechSynthesis.cancel(); btn.textContent = '🔊'; window.__spk = null; return; }
+  window.speechSynthesis.cancel();
+  if (window.__spk) window.__spk.textContent = '🔊';
+  var u = new SpeechSynthesisUtterance(txt);
+  u.lang = 'zh-CN'; u.rate = 0.92;
+  u.onend = function () { btn.textContent = '🔊'; window.__spk = null; };
+  btn.textContent = '■'; window.__spk = btn;
+  window.speechSynthesis.speak(u);
+}
+function draw() {
+  var pool = DATA.filter(function (d) { return match(d) && !USED[d.id]; });
+  if (pool.length === 0) { alert('当前筛选下没有未用过的句子'); return; }
+  pool.sort(function () { return Math.random() - 0.5; });
+  drawIds = pool.slice(0, 5).map(function (d) { return d.id; });
+  drawMode = true; render();
+  window.scrollTo(0, 0);
+}
+function stat() {
+  var u = 0, w = 0;
+  var today = new Date();
+  DATA.forEach(function (d) {
+    if (USED[d.id]) u++;
+    var dd = new Date(d.date);
+    if ((today - dd) / 86400000 <= 7) w++;
+  });
+  el('s1').textContent = DATA.length;
+  el('s2').textContent = u;
+  el('s3').textContent = DATA.length - u;
+  el('s4').textContent = w;
+}
+function render() {
+  stat(); renderChips();
+  var list = DATA.filter(function (d) { return drawMode ? drawIds.indexOf(d.id) >= 0 : match(d); });
+  var h = '';
+  list.forEach(function (d) {
+    var tg = '<span class="tag big">' + d.big + '</span>'
+      + d.topics.map(function (t) { return '<span class="tag sm">' + t + '</span>'; }).join('');
+    h += '<div class="it' + (USED[d.id] ? ' used' : '') + (d.type === '短语' ? ' phrase' : '') + '">'
+      + '<div class="tx">' + d.text + '</div><div class="mt">' + tg
+      + '<span class="dt">' + d.date.slice(5) + ' · ' + d.type + '</span>'
+      + (d.src ? '<span class="src">' + d.src + '</span>' : '')
+      + '<button class="ibtn say" onclick="say(this, this.parentNode.parentNode.querySelector(\'.tx\').innerText)">🔊</button>'
+      + '<button class="ibtn' + (USED[d.id] ? ' on' : '') + '" onclick="toggle(\'' + d.id + '\')">'
+      + (USED[d.id] ? '已用过 ✓' : '标为已用') + '</button></div></div>';
+  });
+  if (!h) h = '<div class="empty">没有符合条件的句子</div>';
+  el('list').innerHTML = h;
+  el('cnt').textContent = list.length;
+  el('draw').style.display = drawMode ? 'block' : 'none';
+  el('dbtn').textContent = drawMode ? '退出抽签' : '随机抽 5 句';
+}
+function exportUsed() {
+  var blob = new Blob([JSON.stringify({ used: USED, at: new Date().toISOString() }, null, 1)], { type: 'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '摘抄已用清单.json';
+  a.click();
+}
+function importUsed(inp) {
+  var f = inp.files[0];
+  if (!f) return;
+  var r = new FileReader();
+  r.onload = function () {
+    try {
+      var o = JSON.parse(r.result);
+      USED = o.used || o;
+      save(); render(); alert('已恢复 ' + Object.keys(USED).length + ' 条标记');
+    } catch (e) { alert('文件格式不对'); }
+  };
+  r.readAsText(f);
+}
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () { navigator.serviceWorker.register('../sw.js').catch(function () {}); });
+}
+render();
+</script>
+</body>
+</html>
