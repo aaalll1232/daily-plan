@@ -1,0 +1,13 @@
+{
+  "name": "申论晨读包",
+  "short_name": "晨读包",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F5F7FA",
+  "theme_color": "#1F3864",
+  "icons": [
+    {"src": "../icon-192.png", "sizes": "192x192", "type": "image/png"},
+    {"src": "../icon-512.png", "sizes": "512x512", "type": "image/png"}
+  ]
+}

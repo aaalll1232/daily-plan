@@ -1,7 +1,7 @@
 /* 定选每日计划 - Service Worker
  * 策略：缓存优先 + 后台更新（stale-while-revalidate）
  * 核心文件全部本地缓存，保证手机端离线可用（打卡状态本就存 localStorage）。 */
-const CACHE = 'daily-plan-v7';
+const CACHE = 'daily-plan-v8';
 /* plan.md 不进预缓存：install 时缓存一份，之后页面拿到的一定是当天的旧版 */
 const ASSETS = [
   './',
@@ -30,11 +30,11 @@ self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
   const url = new URL(e.request.url);
 
-  /* plan.md 必须「网络优先」：
-     旧策略（stale-while-revalidate + ignoreSearch）会先返回缓存里的旧计划，
+  /* plan.md 和 read/ 晨读包必须「网络优先」：
+     旧策略（stale-while-revalidate + ignoreSearch）会先返回缓存里的旧内容，
      导致当天第一次打开看到的是昨天的计划（9.24 早上看到 9.23 的 bug）。
-     断网时才回退缓存。 */
-  if (url.pathname.endsWith('plan.md')) {
+     晨读包同理——早上读到的必须是当天那份。断网时才回退缓存。 */
+  if (url.pathname.endsWith('plan.md') || url.pathname.indexOf('/read/') >= 0) {
     e.respondWith(
       fetch(e.request)
         .then((res) => {
