@@ -273,6 +273,7 @@ ol.hard li{margin-bottom:2px}
 <div class="tools">
   <button id="btnNotify">锁屏提醒</button>
   <button id="btnIcs">日历</button>
+  <button id="btnRefresh">刷新计划</button>
   <button id="btnPaste">导入</button>
   <button id="btnState">状态备份</button>
   <button class="primary" id="btnGen">生成反馈</button>
@@ -674,6 +675,29 @@ $('btnIcs').onclick=()=>{
   alert('已导出 .ics，用日历 App 打开导入。桌面/锁屏加「日历」小部件即可看到当前时段，并提前 5 分钟提醒。');
 };
 
+/* 手动「刷新计划」：清掉 SW 缓存 + 忽略指纹，强制从线上拉最新 plan.md（不动打卡数据） */
+async function forceRefreshPlan(){
+  try{
+    if(window.caches){ const ks=await caches.keys(); await Promise.all(ks.map(k=>caches.delete(k))).catch(()=>{}); }
+    if('serviceWorker' in navigator){
+      const reg=await navigator.serviceWorker.getRegistration().catch(()=>null);
+      if(reg){ reg.update().catch(()=>{}); if(reg.waiting) try{reg.waiting.postMessage({type:'SKIP_WAITING'});}catch(e){} }
+    }
+    const r=await fetch('plan.md?t='+Date.now(),{cache:'no-store'});
+    if(!r.ok){ alert('没读到线上 plan.md（网络问题）'); return; }
+    const txt=await r.text();
+    const dm=txt.match(/(\d{4})[-年](\d{1,2})[-月](\d{1,2})/);
+    if(!dm){ alert('plan.md 里没解析到日期'); return; }
+    const nd=dm[1]+'-'+String(+dm[2]).padStart(2,'0')+'-'+String(+dm[3]).padStart(2,'0');
+    if(nd>todayStr()){ alert('线上是 '+nd+' 的计划，按约定当天未过完不提前显示'); return; }
+    localStorage.removeItem('dp_planhash');
+    if(!applyPlanText(txt)){ alert('没解析到计划表格，请改用「导入」粘贴'); return; }
+    localStorage.setItem('dp_planhash',planHash(txt));
+    localStorage.setItem('dp_lastauto',nd);
+    location.reload();
+  }catch(e){ alert('刷新失败：'+(e&&e.message||e)); }
+}
+$('btnRefresh').onclick=forceRefreshPlan;
 /* 导入 */
 $('btnPaste').onclick=()=>{$('mPaste').classList.add('show');$('pasteArea').value='';};
 function closeP(){$('mPaste').classList.remove('show');}
@@ -681,6 +705,7 @@ $('btnState').onclick=()=>{$('mState').classList.add('show');$('stateArea').valu
 function closeS(){$('mState').classList.remove('show');}
 function applyPlanText(txt){
   const rows=[];
+  const _prevDate=(PLAN&&PLAN.date)||'';   // 用于判断是「换日」还是「同日改版」
   let date=PLAN.date,wd=PLAN.weekday,title=PLAN.title,sub=PLAN.sub,cons=PLAN.constraint;
   const dm=txt.match(/(\d{4})[-年](\d{1,2})[-月](\d{1,2})/);
   if(dm) date=dm[1]+'-'+String(+dm[2]).padStart(2,'0')+'-'+String(+dm[3]).padStart(2,'0');
@@ -698,7 +723,10 @@ function applyPlanText(txt){
   PLAN=Object.assign({},PLAN,{date:date,weekday:wd,title:title,sub:sub,constraint:cons,items:rows,
     hard:hd.length?hd:PLAN.hard, paper:pm?pm[1].trim():PLAN.paper, risk:rm?rm[1].trim():PLAN.risk});
   try{localStorage.setItem('dp_snap_'+PLAN.date,JSON.stringify(PLAN));}catch(e){}  // 留档，便于回退
-  savePlan(); localStorage.removeItem(SKEY);
+  savePlan();
+  /* 换日 → 清掉旧那天的打卡状态（新的一天从头开始）；
+     同日改版（只是调了时段/起床时间）→ 保留当天已打卡状态，不能把进度清掉。 */
+  if(date!==_prevDate){ localStorage.removeItem(SKEY); try{localStorage.removeItem('dp_state_'+_prevDate);}catch(e){} }
   return true;
 }
 function parsePaste(){
@@ -717,6 +745,7 @@ function releaseLimit(){ // 6:00 前仍算昨天
   if(d.getHours()<6) d.setDate(d.getDate()-1);
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
+function planHash(t){let h=0;for(let i=0;i<t.length;i++){h=(h*31+t.charCodeAt(i))|0;}return String(h);}
 async function tryAutoPlan(){
   try{
     const r=await fetch('plan.md?t='+Date.now(),{cache:'no-store'});
@@ -726,10 +755,16 @@ async function tryAutoPlan(){
     if(!dm) return;
     const nd=dm[1]+'-'+String(+dm[2]).padStart(2,'0')+'-'+String(+dm[3]).padStart(2,'0');
     const today=todayStr();
-    /* 切换闸门（2026-09-25 修订）：plan.md 日期不超过“本地今天”就允许切换；
-       只有 plan.md 比今天还晚（提前一天生成了次日计划）时才不切，跨过午夜变成今天即放行。
-       铁律“当天未过完不提前显示次日”仍成立——当天不可能出现 nd>today。 */
-    if(nd>PLAN.date && nd<=today){
+    /* 切换闸门（2026-09-26 再次修订）：
+       ① 铁律不变——plan.md 日期 > 本地今天时不切（不提前显示次日）；
+       ② 换日：plan.md 日期比当前计划新 → 直接换；
+       ③ 同日改版：日期相同但内容指纹变了（比如当天改了起床时间/时段）→ 也要换，
+          否则手机上会一直停在当天最早那一版（9.26 改 10:00 起床后页面不更新的 bug）。 */
+    if(nd>today) return;
+    const h=planHash(txt), prevH=localStorage.getItem('dp_planhash');
+    const newDay=(nd>PLAN.date), sameDayEdited=(nd===PLAN.date && h!==prevH);
+    if(newDay||sameDayEdited){
+      localStorage.setItem('dp_planhash',h);
       localStorage.setItem('dp_lastauto',nd);
       if(applyPlanText(txt)) location.reload();
     }
@@ -794,9 +829,14 @@ function toast(m){const t=$('toast');if(!t)return;t.textContent=m;t.classList.ad
   setTimeout(()=>t.classList.remove('show'),3600);}
 render();
 initHealth();
-if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').catch(()=>{});}
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').then(reg=>{
+    reg.update().catch(()=>{});                                   // 每次打开都查一次新 SW
+    if(reg.waiting) try{reg.waiting.postMessage({type:'SKIP_WAITING'});}catch(e){}
+  }).catch(()=>{});
+}
 const _la=localStorage.getItem('dp_lastauto');
-if(_la&&_la===PLAN.date){ toast('已自动更新为 '+PLAN.date+' 计划 ✔'); localStorage.removeItem('dp_lastauto'); }
+if(_la&&_la===PLAN.date){ toast('已更新为 '+PLAN.date+' 最新计划 ✔'); localStorage.removeItem('dp_lastauto'); }
 tryAutoPlan();
 </script>
 </body>
