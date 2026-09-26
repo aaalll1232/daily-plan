@@ -1,7 +1,7 @@
 /* 定选每日计划 - Service Worker
  * 策略：缓存优先 + 后台更新（stale-while-revalidate）
  * 核心文件全部本地缓存，保证手机端离线可用（打卡状态本就存 localStorage）。 */
-const CACHE = 'daily-plan-v8';
+const CACHE = 'daily-plan-v9';
 /* plan.md 不进预缓存：install 时缓存一份，之后页面拿到的一定是当天的旧版 */
 const ASSETS = [
   './',
@@ -68,6 +68,7 @@ self.addEventListener('fetch', (e) => {
 /* 收到页面消息：预弹一条通知（部分国产浏览器要求先有一次通知授权交互） */
 self.addEventListener('message', (e) => {
   const d = e.data || {};
+  if (d.type === 'SKIP_WAITING') { self.skipWaiting(); return; }   // 页面点了「刷新计划」→ 立刻换新版
   if (d.type === 'NOTIFY_TEST') {
     self.registration.showNotification('每日计划 · 通知已开启', {
       body: '之后锁屏会常驻显示当前任务。',
