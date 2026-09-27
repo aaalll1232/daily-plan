@@ -702,7 +702,10 @@ function closeS(){$('mState').classList.remove('show');}
 function applyPlanText(txt){
   const rows=[];
   const _prevDate=(PLAN&&PLAN.date)||'';   // 用于判断是「换日」还是「同日改版」
-  let date=PLAN.date,wd=PLAN.weekday,title=PLAN.title,sub=PLAN.sub,cons=PLAN.constraint;
+  let date=PLAN.date,wd=PLAN.weekday,title='',sub='',cons=PLAN.constraint,stage=PLAN.stage;
+  const tm=txt.match(/\*\*标题\*\*[：:](.*)/); if(tm) title=tm[1].trim();
+  const sm=txt.match(/\*\*副标题\*\*[：:](.*)/); if(sm) sub=sm[1].trim();
+  const stm=txt.match(/\*\*阶段\*\*[：:](.*)/); if(stm) stage=stm[1].trim();
   const dm=txt.match(/(\d{4})[-年](\d{1,2})[-月](\d{1,2})/);
   if(dm) date=dm[1]+'-'+String(+dm[2]).padStart(2,'0')+'-'+String(+dm[3]).padStart(2,'0');
   const wm=txt.match(/（(周[一二三四五六日])）/); if(wm) wd=wm[1];
