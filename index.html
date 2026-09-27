@@ -358,7 +358,7 @@ const PLAN_DEFAULT={
     "申论第一次动笔：归纳概括 2 题手写"
   ],
   paper:"标准 3.5h → 今天只有 1.5h + 0.75h = 2.25h，缺 1.25h，9/26（周六）补回。红线：连续中断不超 3 天。",
-  risk:"晚上 18:30 那两道归纳概括，容易变成\"再看一节课算了\"。课能明天补，动笔不能拖。",
+  risk:"",
   // 整体进度用
   spanStart:"2026-09-23", spanEnd:"2026-11-29",
   exams:[["湖南","2026-10-11"],["北京","2026-10-17"],["湖北","2026-10-18"],
@@ -720,7 +720,7 @@ function applyPlanText(txt){
   if(!rows.length) return false;
   const hd=[...txt.matchAll(/^\d+\.\s+(.+)$/gm)].map(m=>m[1]);
   const pm=txt.match(/\*\*论文账\*\*[：:](.*)/), rm=txt.match(/\*\*今天最容易翻车的点\*\*[：:](.*)/);
-  PLAN=Object.assign({},PLAN,{date:date,weekday:wd,title:title,sub:sub,constraint:cons,items:rows,
+  PLAN=Object.assign({},PLAN,{date:date,weekday:wd,title:title,sub:sub,constraint:cons,stage:stage,items:rows,
     hard:hd.length?hd:PLAN.hard, paper:pm?pm[1].trim():PLAN.paper, risk:rm?rm[1].trim():PLAN.risk});
   try{localStorage.setItem('dp_snap_'+PLAN.date,JSON.stringify(PLAN));}catch(e){}  // 留档，便于回退
   savePlan();
