@@ -685,7 +685,6 @@ async function forceRefreshPlan(){
     const dm=txt.match(/(\d{4})[-年](\d{1,2})[-月](\d{1,2})/);
     if(!dm){ alert('plan.md 里没解析到日期'); return; }
     const nd=dm[1]+'-'+String(+dm[2]).padStart(2,'0')+'-'+String(+dm[3]).padStart(2,'0');
-    if(nd>todayStr()){ alert('线上是 '+nd+' 的计划，按约定当天未过完不提前显示'); return; }
     localStorage.removeItem('dp_planhash');
     if(!applyPlanText(txt)){ alert('没解析到计划表格，请改用「导入」粘贴'); return; }
     localStorage.setItem('dp_planhash',planHash(txt));
@@ -754,12 +753,11 @@ async function tryAutoPlan(){
     if(!dm) return;
     const nd=dm[1]+'-'+String(+dm[2]).padStart(2,'0')+'-'+String(+dm[3]).padStart(2,'0');
     const today=todayStr();
-    /* 切换闸门（2026-09-26 再次修订）：
-       ① 铁律不变——plan.md 日期 > 本地今天时不切（不提前显示次日）；
-       ② 换日：plan.md 日期比当前计划新 → 直接换；
-       ③ 同日改版：日期相同但内容指纹变了（比如当天改了起床时间/时段）→ 也要换，
-          否则手机上会一直停在当天最早那一版（9.26 改 10:00 起床后页面不更新的 bug）。 */
-    if(nd>today) return;
+    /* 切换闸门（2026-09-28 深夜修订：按用户指令放开提前显示）：
+       ① 换日：plan.md 日期比当前计划新 → 直接换（含当晚提前推的次日计划，睡前即可看）；
+       ② 同日改版：日期相同但内容指纹变了（比如当天改了起床时间/时段）→ 也要换，
+          否则手机上会一直停在当天最早那一版（9.26 改 10:00 起床后页面不更新的 bug）。
+       （原 2026-09-26 铁律「plan.md 日期 > 本地今天不切」已按用户 9.28 深夜指令移除） */
     const h=planHash(txt), prevH=localStorage.getItem('dp_planhash');
     const newDay=(nd>PLAN.date), sameDayEdited=(nd===PLAN.date && h!==prevH);
     if(newDay||sameDayEdited){
