@@ -116,6 +116,21 @@ ol.hard li{margin-bottom:2px}
 .p{font-size:13.5px;line-height:1.75;color:#3A4453;margin:0}
 .p.warn{color:var(--keyink);font-weight:600}
 
+/* 无时段清单模式（2026-10-30 新增：计划改为只罗列任务、不排时段） */
+.item.lm{padding-left:0;margin-bottom:10px}
+.item.lm:before,.item.lm:after{display:none}
+.item.lm .box{border:1px solid var(--line)}
+.secHd{font-size:13px;font-weight:800;color:var(--brand);margin:16px 2px 6px;
+  padding-left:8px;border-left:4px solid var(--brand2)}
+.orig{font-size:11.5px;color:var(--sub);padding:0 13px 8px;line-height:1.5;opacity:.75}
+.fb .row{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.fb .row button{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 12px;
+  font:inherit;font-size:12.5px;color:#5A6577}
+.cfgF{display:block;width:100%;border:1px solid var(--line);border-radius:10px;padding:9px 10px;
+  font:inherit;font-size:14px;margin-top:4px;background:#FAFBFD}
+.cfgL{font-size:12.5px;color:var(--sub);margin:12px 0 2px;font-weight:600}
+.pushMsg{font-size:12.5px;margin-top:10px;color:var(--brand);font-weight:600}
+
 /* 休息 · 喝水 */
 .hl{display:flex;gap:10px}
 .hl .h{flex:1;border-radius:14px;padding:12px 13px}
@@ -299,6 +314,27 @@ ol.hard li{margin-bottom:2px}
     <button onclick="downloadOut()">下载 .md</button>
     <button onclick="closeM()">关闭</button>
   </div>
+  <div class="row" style="margin-top:8px">
+    <button class="primary" id="btnPush" onclick="submitFB()">↑ 回传到 GitHub</button>
+    <button onclick="openCfg()">⚙ 回传设置</button>
+  </div>
+  <p class="tip" id="pushMsg">回传后会在仓库里生成一个 Issue，电脑端直接读取；同一天重复回传是更新同一个 Issue，不会刷屏。</p>
+</div></div>
+
+<div class="modal" id="mCfg"><div class="sheet">
+  <h3>回传设置</h3>
+  <p class="tip">填一次即可，只存在你这台手机的浏览器里，不会发给任何第三方。<br>
+  Token 去 GitHub → Settings → Developer settings → Personal access tokens 生成，勾 <b>repo</b>（或 fine-grained 只给本仓库 Issues 读写）。</p>
+  <label class="cfgL">GitHub 用户名（owner）</label>
+  <input class="cfgF" id="cfOwner" placeholder="aaalll1232">
+  <label class="cfgL">仓库名（repo）</label>
+  <input class="cfgF" id="cfRepo" placeholder="daily-plan">
+  <label class="cfgL">Token</label>
+  <input class="cfgF" id="cfToken" type="password" placeholder="ghp_...">
+  <div class="row" style="margin-top:14px">
+    <button class="primary" onclick="saveCfg()">保存</button>
+    <button onclick="closeCfg()">关闭</button>
+  </div>
 </div></div>
 
 <div class="modal" id="mPaste"><div class="sheet">
@@ -408,6 +444,8 @@ let ST=loadState();
 function saveState(){localStorage.setItem(SKEY,JSON.stringify(ST));}
 const $=id=>document.getElementById(id);
 const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;');
+/* 列表模式下任务文字里带 **加粗**，渲染出来（2026-10-30 新增） */
+const md=s=>esc(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
 const D=(s)=>{const m=String(s).match(/(\d{4})-(\d{2})-(\d{2})/); return m?new Date(+m[1],+m[2]-1,+m[3]):null;};
 const dayDiff=(a,b)=>Math.round((D(b)-D(a))/86400000);
 
@@ -416,7 +454,7 @@ function render(){
   $('hTitle').textContent=PLAN.title||'';
   $('hSub').textContent=PLAN.sub||'';
   $('constraint').innerHTML='<b>约束：</b>'+esc(PLAN.constraint);
-  $('hard').innerHTML=(PLAN.hard||[]).map(x=>'<li>'+esc(x)+'</li>').join('');
+  $('hard').innerHTML=(PLAN.hard||[]).map(x=>'<li>'+md(x)+'</li>').join('');
   $('paper').textContent=PLAN.paper||'';
   $('risk').textContent=PLAN.risk||'';
   renderOverall(); renderList(); updateProg(); markNow();
@@ -449,8 +487,9 @@ function renderOverall(){
     '<span>剩余备考 <b>'+Math.max(0,dayDiff(PLAN.date,PLAN.spanEnd))+'天</b></span>';
 }
 
-/* 时间轴 */
+/* 时间轴（有时段表格时用） */
 function renderList(){
+  if(PLAN.mode==='list'){ renderListMode(); return; }
   const L=$('list'); L.innerHTML='';
   (PLAN.items||[]).forEach((it,i)=>{
     const st=ST[i]||{};
@@ -478,6 +517,51 @@ function renderList(){
 }
 function setS(i,s){const st=ST[i]||{}; st.s=(st.s===s?null:s); ST[i]=st; saveState();
   renderList(); updateProg(); markNow(); if(st.s) notifyNow();}
+
+/* 无时段清单模式渲染：按 ## 小节分组，任务可勾选 / 写反馈 / 改文字 */
+function renderListMode(){
+  const L=$('list'); L.innerHTML='';
+  let lastSec='__none__';
+  (PLAN.items||[]).forEach((it,i)=>{
+    const st=ST[i]||{};
+    const sec=(PLAN.secs&&PLAN.secs[i])||'';
+    if(sec && sec!==lastSec){
+      const h=document.createElement('div'); h.className='secHd'; h.textContent=sec; L.appendChild(h); lastSec=sec;
+    }
+    const cur=st.text||it[1], edited=!!(st.text && st.text!==it[1]);
+    const d=document.createElement('div');
+    d.className='item lm '+(st.s?'s-'+st.s:''); d.id='it'+i;
+    d.innerHTML=
+      '<div class="box">'+
+        '<div class="hd"><div class="t">'+md(cur)+
+          (edited?'<span class="badge">已改</span>':'')+
+          (st.note?'<span class="badge">已反馈</span>':'')+'</div></div>'+
+        (edited?'<div class="orig">原文：'+md(it[1])+'</div>':'')+
+        '<div class="seg">'+
+          '<button class="'+(st.s==='done'?'on':'')+'" onclick="setS('+i+',\'done\')">✓ 完成</button>'+
+          '<button class="p '+(st.s==='partial'?'on p':'')+'" onclick="setS('+i+',\'partial\')">◐ 部分</button>'+
+          '<button class="s '+(st.s==='skip'?'on s':'')+'" onclick="setS('+i+',\'skip\')">↷ 跳过</button>'+
+          '<button class="n" onclick="toggleFb('+i+')">✎ 反馈</button>'+
+          '<button class="n" onclick="toggleEd('+i+')">✎ 改文字</button>'+
+        '</div>'+
+        '<div class="fb'+(st.note?' show':'')+'" id="fb'+i+'">'+
+          '<div class="hint">做了多少 / 卡在哪 / 对方怎么答复的</div>'+
+          '<textarea rows="2" placeholder="例如：打了 027-82927765，说 070503 可以报 011007" oninput="setN('+i+',this.value)">'+esc(st.note||'')+'</textarea>'+
+        '</div>'+
+        '<div class="fb" id="ed'+i+'">'+
+          '<div class="hint">改这条任务的文字（改动会被记录并回传，原文保留对照）</div>'+
+          '<textarea rows="3" oninput="setT('+i+',this.value)">'+esc(cur)+'</textarea>'+
+          '<div class="row"><button onclick="resetT('+i+')">还原原文</button><button onclick="closeEd('+i+')">完成</button></div>'+
+        '</div>'+
+      '</div>';
+    L.appendChild(d);
+  });
+}
+function setT(i,v){(ST[i]=ST[i]||{}).text=v; saveState();}
+function resetT(i){const st=ST[i]||{}; delete st.text; ST[i]=st; saveState(); renderList();}
+function toggleEd(i){const e=$('ed'+i); if(!e) return; e.classList.toggle('show');
+  if(e.classList.contains('show')) e.querySelector('textarea').focus();}
+function closeEd(i){const e=$('ed'+i); if(e) e.classList.remove('show'); renderList();}
 function setN(i,v){(ST[i]=ST[i]||{}).note=v; saveState();}
 function setM(i,v){(ST[i]=ST[i]||{}).min=v; saveState();}
 function toggleFb(i){const e=$('fb'+i); e.classList.toggle('show'); if(e.classList.contains('show')) e.querySelector('textarea').focus();}
@@ -497,6 +581,7 @@ function updateProg(){
 function mins(t){const m=String(t).match(/(\d{1,2}):(\d{2})/); return m?(+m[1])*60+(+m[2]):null;}
 function endMin(t){const p=String(t).split(/[–\-~]/); return mins(p[1])||mins(p[0])+1;}
 function markNow(){
+  if(PLAN.mode==='list'){ const nb=$('nowBox'); if(nb) nb.style.display='none'; return; }
   const now=new Date(); const cur=now.getHours()*60+now.getMinutes();
   let idx=-1,nx=-1;
   (PLAN.items||[]).forEach((it,i)=>{
@@ -698,6 +783,37 @@ $('btnPaste').onclick=()=>{$('mPaste').classList.add('show');$('pasteArea').valu
 function closeP(){$('mPaste').classList.remove('show');}
 $('btnState').onclick=()=>{$('mState').classList.add('show');$('stateArea').value='';$('stateMsg').textContent='';};
 function closeS(){$('mState').classList.remove('show');}
+/* 取某个小节（标题含关键词）下面的正文段落，跳过列表项 */
+function secText(txt,kw){
+  const lines=txt.replace(/\r/g,'').split('\n');
+  let on=false, out=[];
+  for(const l of lines){
+    const t=l.trim();
+    const h=t.match(/^#{1,4}\s+(.+)$/);
+    if(h){ if(on && out.length) break; on = h[1].indexOf(kw)>=0; out=[]; continue; }
+    if(!on) continue;
+    if(/^---+$/.test(t)) { if(out.length) break; else continue; }
+    if(/^\d+[.、]\s+/.test(t) || /^[-*]\s+/.test(t)) continue;
+    if(t) out.push(t.replace(/\*\*/g,''));
+  }
+  return out.join(' ').trim();
+}
+/* 取某个小节（标题含关键词）下面的编号/项目符号列表 */
+function secList(txt,kw){
+  const lines=txt.replace(/\r/g,'').split('\n');
+  let on=false, out=[];
+  for(const l of lines){
+    const t=l.trim();
+    const h=t.match(/^#{1,4}\s+(.+)$/);
+    if(h){ on = h[1].indexOf(kw)>=0; continue; }
+    if(!on) continue;
+    if(/^---+$/.test(t)) { if(out.length) break; else continue; }
+    const m=t.match(/^\d+[.、]\s+(.+)$/) || t.match(/^[-*]\s+(.+)$/);
+    if(m) out.push(m[1]);
+    else if(!t) { if(out.length) break; }
+  }
+  return out;
+}
 function applyPlanText(txt){
   const rows=[];
   const _prevDate=(PLAN&&PLAN.date)||'';   // 用于判断是「换日」还是「同日改版」
@@ -705,6 +821,13 @@ function applyPlanText(txt){
   const tm=txt.match(/\*\*标题\*\*[：:](.*)/); if(tm) title=tm[1].trim();
   const sm=txt.match(/\*\*副标题\*\*[：:](.*)/); if(sm) sub=sm[1].trim();
   const stm=txt.match(/\*\*阶段\*\*[：:](.*)/); if(stm) stage=stm[1].trim();
+  /* 兼容两种写法：**标题**：xxx  /  **标题：xxx**（2026-10-30 起用后者） */
+  txt.split('\n').forEach(l=>{
+    const m=l.trim().match(/^\*\*(日期|标题|副标题|阶段|约束)\s*[：:]\s*(.+?)\*\*\s*$/);
+    if(!m) return; const v=m[2].trim();
+    if(m[1]==='标题') title=v; else if(m[1]==='副标题') sub=v;
+    else if(m[1]==='阶段') stage=v; else if(m[1]==='约束') cons=v;
+  });
   const dm=txt.match(/(\d{4})[-年](\d{1,2})[-月](\d{1,2})/);
   if(dm) date=dm[1]+'-'+String(+dm[2]).padStart(2,'0')+'-'+String(+dm[3]).padStart(2,'0');
   const wm=txt.match(/（(周[一二三四五六日])）/); if(wm) wd=wm[1];
@@ -715,11 +838,43 @@ function applyPlanText(txt){
     if(c.length<4||!/\d{1,2}:\d{2}/.test(c[0])) return;
     rows.push([c[0],c[1],c[2]||'',c[3]||'',c[4]||'']);
   });
+  /* 无时段清单模式：plan.md 里没有「| 08:00–08:30 | …」这样的时段表格时，
+     改用 Markdown 列表（1. xxx / - xxx）作为任务项，并按 ## 小节分组。 */
+  let mode = rows.length ? 'time' : 'list';
+  if(mode==='list'){
+    const secs=[]; let curSec='', skip=false;
+    txt.split('\n').forEach(l=>{
+      const t=l.trim();
+      const h=t.match(/^#{2,4}\s+(.+)$/);
+      if(h){ const name=h[1].replace(/^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\s]+/u,'').trim();
+        /* 「明天」「今晚要发回」这些是给电脑端看的，不当成今日可打卡任务 */
+        skip = /明天|今晚|反馈清单/.test(name); curSec=skip?'':name; return; }
+      if(/^---+$/.test(t)) return;
+      if(skip) return;
+      const oi=t.match(/^\d+[.、]\s+(.+)$/), bi=t.match(/^[-*]\s+(.+)$/);
+      if(oi||bi){ rows.push(['', (oi||bi)[1], '', '', '']); secs.push(curSec); }
+    });
+    PLAN.secs=secs;
+  }else{ PLAN.secs=[]; }
   if(!rows.length) return false;
-  const hd=[...txt.matchAll(/^\d+\.\s+(.+)$/gm)].map(m=>m[1]);
-  const pm=txt.match(/\*\*论文账\*\*[：:](.*)/), rm=txt.match(/\*\*今天最容易翻车的点\*\*[：:](.*)/);
+
+  let hd=[], paper=PLAN.paper, risk=PLAN.risk;
+  if(mode==='list'){
+    hd=secList(txt,'三件硬事');
+    const rk=secList(txt,'最容易翻车');
+    risk = rk.length ? rk.join('　') : ((txt.match(/\*\*今天最容易翻车的点\*\*[：:]([\s\S]*?)(?=\n#{1,4}\s|\n---|$)/)||[])[1]||'').trim();
+    paper = ((txt.match(/\*\*论文账\*\*[：:]([\s\S]*?)(?=\n#{1,4}\s|\n---|$)/)||[])[1]||'').trim() || PLAN.paper;
+    if(!paper){   /* 兼容：直接写在「## D. 论文」小节下的正文 */
+      const p=secText(txt,'论文');
+      if(p) paper=p;
+    }
+  }else{
+    hd=[...txt.matchAll(/^\d+\.\s+(.+)$/gm)].map(m=>m[1]);
+    const pm=txt.match(/\*\*论文账\*\*[：:](.*)/), rm=txt.match(/\*\*今天最容易翻车的点\*\*[：:](.*)/);
+    if(pm) paper=pm[1].trim(); if(rm) risk=rm[1].trim();
+  }
   PLAN=Object.assign({},PLAN,{date:date,weekday:wd,title:title,sub:sub,constraint:cons,stage:stage,items:rows,
-    hard:hd.length?hd:PLAN.hard, paper:pm?pm[1].trim():PLAN.paper, risk:rm?rm[1].trim():PLAN.risk});
+    mode:mode, hard:hd.length?hd:PLAN.hard, paper:paper, risk:risk});
   try{localStorage.setItem('dp_snap_'+PLAN.date,JSON.stringify(PLAN));}catch(e){}  // 留档，便于回退
   savePlan();
   /* 换日 → 清掉旧那天的打卡状态（新的一天从头开始）；
@@ -775,15 +930,31 @@ function genText(){
   s+='**整体进度**：'+$('ovSub').textContent+'　|　**今日完成**：'+pctNow()+'%（已完成 '+$('mDone').textContent+
       ' / 部分 '+$('mPart').textContent+' / 跳过 '+$('mSkip').textContent+'）\n\n';
   s+='**休息/喝水**：起身休息 '+H.rests+' 次 · 喝水 '+H.cups+'/'+H.goal+' 杯（约 '+H.cups*250+'ml）\n\n';
-  s+='| 时段 | 任务 | 状态 | 实际用时 | 反馈 |\n| --- | --- | --- | --- | --- |\n';
-  (PLAN.items||[]).forEach((it,i)=>{const st=ST[i]||{};
-    s+='| '+it[0]+' | '+it[1]+' | '+(SN[st.s]||'未标记')+' | '+(st.min||'-')+' | '+(st.note||'')+' |\n';});
+  if(PLAN.mode==='list'){
+    s+='| # | 任务 | 状态 | 反馈 |\n| --- | --- | --- | --- |\n';
+    (PLAN.items||[]).forEach((it,i)=>{const st=ST[i]||{};
+      s+='| '+(i+1)+' | '+((st.text&&st.text!==it[1])?st.text+'（原文：'+it[1]+'）':it[1])+' | '+(SN[st.s]||'未标记')+' | '+(st.note||'')+' |\n';});
+  }else{
+    s+='| 时段 | 任务 | 状态 | 实际用时 | 反馈 |\n| --- | --- | --- | --- | --- |\n';
+    (PLAN.items||[]).forEach((it,i)=>{const st=ST[i]||{};
+      s+='| '+it[0]+' | '+it[1]+' | '+(SN[st.s]||'未标记')+' | '+(st.min||'-')+' | '+(st.note||'')+' |\n';});
+  }
   s+='\n### 逐项反馈\n';
   (PLAN.items||[]).forEach((it,i)=>{const st=ST[i]||{};
     if(st.note||st.s) s+='- ['+it[0]+'] '+it[1]+'：'+(SN[st.s]||'未标记')+(st.min?'（实际 '+st.min+'）':'')+(st.note?' — '+st.note:'')+'\n';});
   s+='\n### 三件硬事\n';
   (PLAN.hard||[]).forEach((h,i)=>{s+=(i+1)+'. '+h+' → \n';});
   s+='\n### 其他\n- 论文今天推进了什么：\n- 导师/组会新要求：\n- 明天是否有固定占用（值班/组会）：\n- 卡住的地方 / 要调整计划的地方：\n';
+  /* 机器可读块：电脑端直接解析，用来生成次日计划 */
+  const _its=(PLAN.items||[]).map((it,i)=>{const st=ST[i]||{};
+    return {i:i, sec:(PLAN.secs&&PLAN.secs[i])||'', time:it[0], task:it[1], text:st.text||it[1],
+      edited:!!(st.text&&st.text!==it[1]), status:st.s||'', min:st.min||'', note:st.note||''};});
+  const _payload={date:PLAN.date, mode:PLAN.mode||'time', title:PLAN.title||'', pct:pctNow(),
+    stats:{done:+$('mDone').textContent, partial:+$('mPart').textContent, skip:+$('mSkip').textContent,
+      left:+$('mLeft').textContent, total:(PLAN.items||[]).length},
+    health:{rests:H.rests, cups:H.cups, goal:H.goal||8},
+    items:_its, edits:_its.filter(x=>x.edited), hard:PLAN.hard||[]};
+  s+='\n<!--PLAN_FEEDBACK_JSON\n'+JSON.stringify(_payload)+'\n-->\n';
   return s;
 }
 $('btnGen').onclick=()=>{$('out').value=genText(); $('mOut').classList.add('show');};
@@ -794,6 +965,53 @@ function copyOut(){const t=$('out');t.select();t.setSelectionRange(0,99999);
 function downloadOut(){const a=document.createElement('a');
   a.href=URL.createObjectURL(new Blob([$('out').value],{type:'text/markdown;charset=utf-8'}));
   a.download='反馈_'+PLAN.date+'.md'; a.click();}
+
+/* ===== 回传到 GitHub：手机端 → 仓库 Issue → 电脑端读取 ===== */
+const GKEY='dp_ghcfg';
+function ghCfg(){try{return JSON.parse(localStorage.getItem(GKEY)||'{}');}catch(e){return {}}}
+function openCfg(){const c=ghCfg();
+  $('cfOwner').value=c.owner||'aaalll1232'; $('cfRepo').value=c.repo||'daily-plan'; $('cfToken').value=c.token||'';
+  $('mCfg').classList.add('show');}
+function closeCfg(){$('mCfg').classList.remove('show');}
+function saveCfg(){localStorage.setItem(GKEY,JSON.stringify({owner:$('cfOwner').value.trim(),
+  repo:$('cfRepo').value.trim(), token:$('cfToken').value.trim()})); closeCfg(); toast('已保存，点「回传到 GitHub」试试');}
+async function ghApi(method,path,body){
+  const c=ghCfg(); if(!c.token) throw new Error('还没填 Token');
+  const r=await fetch('https://api.github.com'+path,{method:method,
+    headers:{Authorization:'Bearer '+c.token, Accept:'application/vnd.github+json',
+      'Content-Type':'application/json', 'X-GitHub-Api-Version':'2022-11-28'},
+    body: body?JSON.stringify(body):undefined});
+  const j=await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(j.message||('HTTP '+r.status));
+  return j;
+}
+async function submitFB(){
+  const c=ghCfg(); const msg=$('pushMsg');
+  if(!c.owner||!c.repo||!c.token){ openCfg(); msg.style.color='#C00000';
+    msg.textContent='先填 owner / repo / Token 再回传'; return; }
+  $('out').value=genText();                      // 先刷新，保证带上最新勾选与改动
+  const title='计划反馈 '+PLAN.date, body=$('out').value;
+  $('btnPush').disabled=true; $('btnPush').textContent='回传中…';
+  msg.style.color=''; msg.textContent='正在提交…';
+  try{
+    let res=null, num=+(localStorage.getItem('dp_issue_'+PLAN.date)||0);
+    if(num){ try{ res=await ghApi('PATCH','/repos/'+c.owner+'/'+c.repo+'/issues/'+num,{body:body}); }catch(e){ num=0; } }
+    if(!res){
+      const q=encodeURIComponent('repo:'+c.owner+'/'+c.repo+' "'+title+'" in:title');
+      const f=await ghApi('GET','/search/issues?q='+q+'&per_page=5');
+      const hit=(f.items||[]).find(x=>x.title===title);
+      res = hit ? await ghApi('PATCH','/repos/'+c.owner+'/'+c.repo+'/issues/'+hit.number,{title:title,body:body})
+                : await ghApi('POST','/repos/'+c.owner+'/'+c.repo+'/issues',{title:title,body:body});
+    }
+    localStorage.setItem('dp_issue_'+PLAN.date, res.number);
+    $('btnPush').disabled=false; $('btnPush').textContent='↑ 回传到 GitHub';
+    msg.textContent='已回传 ✔ Issue #'+res.number+'（今天再点是更新同一条）';
+    toast('回传成功 #'+res.number);
+  }catch(e){
+    $('btnPush').disabled=false; $('btnPush').textContent='↑ 回传到 GitHub';
+    msg.style.color='#C00000'; msg.textContent='回传失败：'+e.message;
+  }
+}
 /* 打卡状态 导出/导入（防丢 + 跨设备恢复） */
 function stateJSON(){return JSON.stringify({date:PLAN.date, items:PLAN.items.map((it,i)=>({t:it[0],name:it[1],s:(ST[i]||{}).s||'',min:(ST[i]||{}).min||'',note:(ST[i]||{}).note||''})), health:{rests:H.rests,cups:H.cups}}, null, 0);}
 function exportState(){$('stateArea').value=stateJSON(); copyState();}
