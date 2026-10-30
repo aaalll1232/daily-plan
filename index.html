@@ -880,12 +880,25 @@ function applyPlanText(txt){
     const pm=txt.match(/\*\*论文账\*\*[：:](.*)/), rm=txt.match(/\*\*今天最容易翻车的点\*\*[：:](.*)/);
     if(pm) paper=pm[1].trim(); if(rm) risk=rm[1].trim();
   }
+  /* 备考时间轴：plan.md 里可用 <!--EXAMS 名称|日期 --> / <!--PENDING 一行一条 --> 覆盖，
+     这样调整考试时间不用等页面缓存（plan.md 每次回源，页面代码可能缓存 12h） */
+  let examsMd=null, pendMd=null, endMd=null;
+  const em=txt.match(/<!--EXAMS\s*([\s\S]*?)\s*-->/);
+  if(em){
+    const arr=em[1].split('\n').map(x=>x.trim()).filter(Boolean)
+      .map(x=>x.split('|').map(y=>y.trim()))
+      .filter(a=>a.length>=2 && /\d{4}-\d{2}-\d{2}/.test(a[1]));
+    if(arr.length){ examsMd=arr; endMd=arr[arr.length-1][1]; }
+  }
+  const pm2=txt.match(/<!--PENDING\s*([\s\S]*?)\s*-->/);
+  if(pm2){ const arr=pm2[1].split('\n').map(x=>x.trim()).filter(Boolean); if(arr.length) pendMd=arr; }
+
   PLAN=Object.assign({},PLAN,{date:date,weekday:wd,title:title,sub:sub,constraint:cons,stage:stage,items:rows,
     mode:mode, hard:hd.length?hd:PLAN.hard, paper:paper, risk:risk,
     /* 备考时间轴随代码走（手机端 localStorage 里的旧考试表会过期，每次换计划强制刷新） */
-    spanStart:PLAN_DEFAULT.spanStart, spanEnd:PLAN_DEFAULT.spanEnd,
-    exams:JSON.parse(JSON.stringify(PLAN_DEFAULT.exams)),
-    pending:(PLAN_DEFAULT.pending||[]).slice()});
+    spanStart:PLAN_DEFAULT.spanStart, spanEnd:endMd||PLAN_DEFAULT.spanEnd,
+    exams:examsMd||JSON.parse(JSON.stringify(PLAN_DEFAULT.exams)),
+    pending:pendMd||(PLAN_DEFAULT.pending||[]).slice()});
   try{localStorage.setItem('dp_snap_'+PLAN.date,JSON.stringify(PLAN));}catch(e){}  // 留档，便于回退
   savePlan();
   /* 换日 → 清掉旧那天的打卡状态（新的一天从头开始）；
