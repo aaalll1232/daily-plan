@@ -771,9 +771,8 @@ async function forceRefreshPlan(){
       const reg=await navigator.serviceWorker.getRegistration().catch(()=>null);
       if(reg){ reg.update().catch(()=>{}); if(reg.waiting) try{reg.waiting.postMessage({type:'SKIP_WAITING'});}catch(e){} }
     }
-    const r=await fetch('plan.md?t='+Date.now(),{cache:'no-store'});
-    if(!r.ok){ alert('没读到线上 plan.md（网络问题）'); return; }
-    const txt=await r.text();
+    const txt=await fetchPlanText();
+    if(!txt){ alert('没读到线上 plan.md（网络问题）'); return; }
     const dm=txt.match(/(\d{4})[-年](\d{1,2})[-月](\d{1,2})/);
     if(!dm){ alert('plan.md 里没解析到日期'); return; }
     const nd=dm[1]+'-'+String(+dm[2]).padStart(2,'0')+'-'+String(+dm[3]).padStart(2,'0');
@@ -916,6 +915,29 @@ function parsePaste(){
    具体判定：本机当前时刻若已过 6:00，则"可上线日期"= 今天；未到 6:00 则为昨天。
    只有 plan.md 的日期 > 当前计划日期，且 plan.md 日期 <= 可上线日期，才切换。
    这样 23 号当天打开不会变成 24 号；24 号早上 6 点后打开才会自动切到 24 号。 */
+const GH_OWNER_DEFAULT='aaalll1232', GH_REPO_DEFAULT='daily-plan';
+/* 取 plan.md 正文：优先走 api.github.com（实时、不缓存）。
+   CDN / Pages 可能把 plan.md 缓存 12h 且忽略查询串，那样手机上会一直看到旧计划；
+   API 返回的是 base64，本地解码，无鉴权 60 次/小时足够用。失败再回退相对路径。 */
+async function fetchPlanText(){
+  const c=ghCfg(); const o=c.owner||GH_OWNER_DEFAULT, r=c.repo||GH_REPO_DEFAULT;
+  try{
+    const resp=await fetch('https://api.github.com/repos/'+o+'/'+r+'/contents/plan.md?t='+Date.now(),
+      {cache:'no-store', headers:{Accept:'application/vnd.github+json'}});
+    if(resp.ok){
+      const j=await resp.json();
+      if(j&&j.content){
+        const bin=atob(String(j.content).replace(/\s/g,''));
+        const bytes=Uint8Array.from(bin,ch=>ch.charCodeAt(0));
+        const txt=new TextDecoder('utf-8').decode(bytes);
+        if(txt&&/日期/.test(txt)) return txt;
+      }
+    }
+  }catch(e){}
+  const r2=await fetch('plan.md?t='+Date.now(),{cache:'no-store'});
+  if(!r2.ok) return '';
+  return await r2.text();
+}
 function todayStr(){const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function releaseLimit(){ // 6:00 前仍算昨天
   const d=new Date();
@@ -925,9 +947,8 @@ function releaseLimit(){ // 6:00 前仍算昨天
 function planHash(t){let h=0;for(let i=0;i<t.length;i++){h=(h*31+t.charCodeAt(i))|0;}return String(h);}
 async function tryAutoPlan(){
   try{
-    const r=await fetch('plan.md?t='+Date.now(),{cache:'no-store'});
-    if(!r.ok) return;
-    const txt=await r.text();
+    const txt=await fetchPlanText();
+    if(!txt) return;
     const dm=txt.match(/(\d{4})[-年](\d{1,2})[-月](\d{1,2})/);
     if(!dm) return;
     const nd=dm[1]+'-'+String(+dm[2]).padStart(2,'0')+'-'+String(+dm[3]).padStart(2,'0');
