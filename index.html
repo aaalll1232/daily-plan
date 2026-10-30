@@ -391,10 +391,13 @@ const PLAN_DEFAULT={
   hard:[],
   paper:"",
   risk:"",
-  // 整体进度用
-  spanStart:"2026-09-23", spanEnd:"2026-11-29",
-  exams:[["湖南","2026-10-11"],["北京","2026-10-17"],["湖北","2026-10-18"],
-         ["四川","2026-10-24"],["贵州","2026-11-05"],["甘肃","2026-11-21"],["国考","2026-11-29"]],
+  // 整体进度用（2026-10-30 按桌面《定选必看信息汇总.xlsx》重读更新）
+  spanStart:"2026-09-23", spanEnd:"2026-12-26",
+  /* 只列今天及以后仍有确定笔试日期的场次；已考 / 弃考 / 下岸的不再进时间轴 */
+  exams:[["江西","2026-11-15"],["甘肃","2026-11-21"],["国考","2026-11-29"],
+         ["四川省考","2026-12-06"],["广西","2026-12-13"],["中国烟草","2026-12-26"]],
+  /* 笔试日期尚未公布、只知区间的，单列不进时间轴 */
+  pending:["辽宁（拟 11—12 月，报名 10-31 17:00 截止）","山东第二批（时间另行通知）"],
   stage:"备考冲刺期（9 月下旬起）",
   stageDays:[1,8],
   /* 9.23 全天最终打卡（用户 23:49 反馈：11 完成/5 跳过，69%）；statesDate 限定防误用到其他天 */
@@ -468,23 +471,27 @@ function renderOverall(){
   const pctG=Math.round(passed/total*100);
   const bar=$('tlBar');
   let html='<i style="width:'+pctG+'%"></i>';
-  (PLAN.exams||[]).forEach(([n,d])=>{
+  /* 只画今天及以后的场次：已考完/弃考/下岸的一律不显示（2026-10-30 起） */
+  let exams=(PLAN.exams||[]).filter(([n,d])=>D(d)&&dayDiff(PLAN.date,d)>=0);
+  if(!exams.length) exams=(PLAN_DEFAULT.exams||[]).filter(([n,d])=>dayDiff(PLAN.date,d)>=0);
+  exams.forEach(([n,d])=>{
     const p=Math.max(0,Math.min(100,((D(d)-s)/86400000)/total*100));
-    const isNext=(D(d)-today)/86400000>=0 && (!PLAN._next||D(d)<D(PLAN._next));
+    const isNext=(!PLAN._next&&d===exams[0][1]);
     html+='<div class="dot'+(isNext?' big':'')+'" style="left:'+p+'%"></div>'+
           '<div class="lb" style="left:'+p+'%"><b>'+n+'</b>'+d.slice(5)+'</div>';
   });
   const pt=Math.max(0,Math.min(100,passed/total*100));
   html+='<div class="today" style="left:'+pt+'%"></div><div class="todayLb" style="left:'+pt+'%">今天</div>';
   bar.innerHTML=html;
-  const nx=(PLAN.exams||[]).find(([n,d])=>dayDiff(PLAN.date,d)>=0);
+  const nx=exams[0];
   const sd=PLAN.stageDays||[1,8];
   $('ovSub').textContent = pctG+'% · 距'+(nx?nx[0]+' '+dayDiff(PLAN.date,nx[1])+'天':'全部考完');
   $('ovPill').innerHTML=
     '<span>当前阶段 <b>'+esc(PLAN.stage)+'</b></span>'+
     '<span>阶段进度 <b>Day '+sd[0]+' / '+sd[1]+'</b></span>'+
     (nx?'<span>下一场 <b>'+nx[0]+' '+nx[1]+'</b>（'+dayDiff(PLAN.date,nx[1])+'天）</span>':'')+
-    '<span>剩余备考 <b>'+Math.max(0,dayDiff(PLAN.date,PLAN.spanEnd))+'天</b></span>';
+    '<span>剩余备考 <b>'+Math.max(0,dayDiff(PLAN.date,PLAN.spanEnd))+'天</b></span>'+
+    ((PLAN.pending&&PLAN.pending.length)?'<span>日期待定 <b>'+esc(PLAN.pending.join('、'))+'</b></span>':'');
 }
 
 /* 时间轴（有时段表格时用） */
@@ -874,7 +881,11 @@ function applyPlanText(txt){
     if(pm) paper=pm[1].trim(); if(rm) risk=rm[1].trim();
   }
   PLAN=Object.assign({},PLAN,{date:date,weekday:wd,title:title,sub:sub,constraint:cons,stage:stage,items:rows,
-    mode:mode, hard:hd.length?hd:PLAN.hard, paper:paper, risk:risk});
+    mode:mode, hard:hd.length?hd:PLAN.hard, paper:paper, risk:risk,
+    /* 备考时间轴随代码走（手机端 localStorage 里的旧考试表会过期，每次换计划强制刷新） */
+    spanStart:PLAN_DEFAULT.spanStart, spanEnd:PLAN_DEFAULT.spanEnd,
+    exams:JSON.parse(JSON.stringify(PLAN_DEFAULT.exams)),
+    pending:(PLAN_DEFAULT.pending||[]).slice()});
   try{localStorage.setItem('dp_snap_'+PLAN.date,JSON.stringify(PLAN));}catch(e){}  // 留档，便于回退
   savePlan();
   /* 换日 → 清掉旧那天的打卡状态（新的一天从头开始）；
