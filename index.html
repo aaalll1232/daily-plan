@@ -460,6 +460,9 @@ function render(){
   $('hard').innerHTML=(PLAN.hard||[]).map(x=>'<li>'+md(x)+'</li>').join('');
   $('paper').textContent=PLAN.paper||'';
   $('risk').textContent=PLAN.risk||'';
+  /* 计划里没写这三块就不显示卡片，避免空框和旧计划残留 */
+  [['hard',(PLAN.hard||[]).length>0],['paper',!!PLAN.paper],['risk',!!PLAN.risk]]
+    .forEach(([id,show])=>{const e=$(id); if(e&&e.parentNode) e.parentNode.style.display=show?'':'none';});
   renderOverall(); renderList(); updateProg(); markNow();
 }
 
@@ -864,12 +867,12 @@ function applyPlanText(txt){
   }else{ PLAN.secs=[]; }
   if(!rows.length) return false;
 
-  let hd=[], paper=PLAN.paper, risk=PLAN.risk;
+  let hd=[], paper='', risk='';
   if(mode==='list'){
     hd=secList(txt,'三件硬事');
     const rk=secList(txt,'最容易翻车');
     risk = rk.length ? rk.join('　') : ((txt.match(/\*\*今天最容易翻车的点\*\*[：:]([\s\S]*?)(?=\n#{1,4}\s|\n---|$)/)||[])[1]||'').trim();
-    paper = ((txt.match(/\*\*论文账\*\*[：:]([\s\S]*?)(?=\n#{1,4}\s|\n---|$)/)||[])[1]||'').trim() || PLAN.paper;
+    paper = ((txt.match(/\*\*论文账\*\*[：:]([\s\S]*?)(?=\n#{1,4}\s|\n---|$)/)||[])[1]||'').trim();
     if(!paper){   /* 兼容：直接写在「## D. 论文」小节下的正文 */
       const p=secText(txt,'论文');
       if(p) paper=p;
@@ -890,14 +893,14 @@ function applyPlanText(txt){
     if(arr.length){ examsMd=arr; endMd=arr[arr.length-1][1]; }
   }
   const pm2=txt.match(/<!--PENDING\s*([\s\S]*?)\s*-->/);
-  if(pm2){ const arr=pm2[1].split('\n').map(x=>x.trim()).filter(Boolean); if(arr.length) pendMd=arr; }
+  if(pm2){ pendMd=pm2[1].split('\n').map(x=>x.trim()).filter(Boolean); }
 
   PLAN=Object.assign({},PLAN,{date:date,weekday:wd,title:title,sub:sub,constraint:cons,stage:stage,items:rows,
-    mode:mode, hard:hd.length?hd:PLAN.hard, paper:paper, risk:risk,
+    mode:mode, hard:hd, paper:paper, risk:risk,
     /* 备考时间轴随代码走（手机端 localStorage 里的旧考试表会过期，每次换计划强制刷新） */
     spanStart:PLAN_DEFAULT.spanStart, spanEnd:endMd||PLAN_DEFAULT.spanEnd,
     exams:examsMd||JSON.parse(JSON.stringify(PLAN_DEFAULT.exams)),
-    pending:pendMd||(PLAN_DEFAULT.pending||[]).slice()});
+    pending:pendMd||[]});
   try{localStorage.setItem('dp_snap_'+PLAN.date,JSON.stringify(PLAN));}catch(e){}  // 留档，便于回退
   savePlan();
   /* 换日 → 清掉旧那天的打卡状态（新的一天从头开始）；
